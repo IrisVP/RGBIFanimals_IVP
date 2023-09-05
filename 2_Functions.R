@@ -5,9 +5,8 @@ library("dplyr")
 require("geosphere")
 require("rgbif")
 library("ggplot2")
-library("ggrepel")
 library("tidyr")
-library("worms")
+library("worrms")
 
 ################################### Functions ################################################
 
