@@ -14,33 +14,42 @@ test_that("Get occurrence data", {
 })
 
 test_that("check_occurrence_data", {
-  expect_true(TRUE)
+  species <- "Acartia margalefi"
+  expect_no_error(test <- check_occurrence_data(species))
+  expect_gte(nrow(test), 6)
 })
 
 test_that("find_closest_registered_place", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
 
 test_that("filter_n_closest_coordinate_ceiling", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
 
 test_that("find_shortest_route_in_sea", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
 
 test_that("filter_on_distance", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
 
 test_that("write.clean.csv", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
 
 test_that("check_in_file", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
 
 test_that("check_official_name", {
   expect_true(TRUE)
+  # TODO: add more tests here
 })
