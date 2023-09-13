@@ -41,5 +41,5 @@ jobs:
             ggplot2
             tidyr
             worrms
-      - name: Run the shiny application
+      - name: Run the tests file
         run: Rscript 6_Tests.R
