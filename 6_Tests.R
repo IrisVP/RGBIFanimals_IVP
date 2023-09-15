@@ -31,9 +31,12 @@ test_that("check_occurrence_data", {
 
 test_that("find_closest_registered_place", {
   species <- "Acartia margalefi"
-  coordinates <- t(data.frame(row.names = c("Observatory.ID","Longitude","Latitude"), "1" = c("BelgianCoast",2.79178508,51.6533567)))
+  coordinates <- data.frame("Observatory.ID" = "BelgianCoast",
+                            "Longitude" = 2.79178508,
+                            "Latitude" = 51.6533567)
   tr <- create_rastered_world("Inputs/tr.rdata")
-  expect_no_condition(find_closest_registered_place(species, coordinates, tr, "Output/tests.csv"))
+  expect_no_condition(find_closest_registered_place(species, coordinates,
+                                                    tr, "Output/tests.csv"))
   # TODO: add more tests here
 })
 
@@ -53,7 +56,8 @@ test_that("find_shortest_route_in_sea", {
   tr <- create_rastered_world("Inputs/tr.rdata")
   filename <- "Output/DistanceOverSeaFORTESTS.csv"
   expect_false(file.exists(filename))
-  expect_no_error(find_shortest_route_in_sea(samplelocation, occurrence_data, tr, row, filename))
+  expect_no_error(find_shortest_route_in_sea(samplelocation, occurrence_data,
+                                             tr, row, filename))
   expect_true(file.exists(filename))
   # TODO: add more tests here
 })
@@ -77,3 +81,5 @@ test_that("check_official_name", {
   expect_true(TRUE)
   # TODO: add more tests here
 })
+
+rm(list = ls())
