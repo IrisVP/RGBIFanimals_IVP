@@ -41,5 +41,6 @@ jobs:
             ggplot2
             tidyr
             worrms
+            rgdal
       - name: Run the tests file
         run: Rscript 6_Tests.R
