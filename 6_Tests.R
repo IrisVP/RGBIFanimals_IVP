@@ -4,7 +4,9 @@ library("testthat")
 
 test_that("Create rastered world", {
   expect_no_error(create_rastered_world("Inputs/tr.rdata"))
-  # TODO: add more tests here
+  expect_false(file.exists("test_outputs/tr.rdata"))
+  expect_no_error(create_rastered_world("test_outputs/tr.rdata"))
+  expect_true(file.exists("test_outputs/tr.rdata"))
 })
 
 test_that("Get occurrence data", {

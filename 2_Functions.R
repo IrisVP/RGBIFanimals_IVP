@@ -7,6 +7,7 @@ require("rgbif")
 library("ggplot2")
 library("tidyr")
 library("worrms")
+library("sf")
 
 ################################### Functions ################################################
 
