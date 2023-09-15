@@ -55,7 +55,7 @@ test_that("find_shortest_route_in_sea", {
   expect_false(file.exists(filename))
   expect_no_error(find_shortest_route_in_sea(samplelocation, occurrence_data, tr, row, filename))
   expect_true(file.exists(filename))
-  TODO: add more tests here
+  # TODO: add more tests here
 })
 
 test_that("filter_on_distance", {
