@@ -36,7 +36,7 @@ test_that("find_closest_registered_place", {
                             "Latitude" = 51.6533567)
   tr <- create_rastered_world("Inputs/tr.rdata")
   # expect_no_condition(find_closest_registered_place(species, coordinates,
-  #                                                   tr, "Output/tests.csv"))
+  #                                                   tr, "test_outputs/tests.csv"))
   # TODO: add more tests here
   expect_true(TRUE)
 })
@@ -55,7 +55,7 @@ test_that("find_shortest_route_in_sea", {
                                "Latitude" = 48.7175)
   occurrence_data <- check_occurrence_data(row[1])
   tr <- create_rastered_world("Inputs/tr.rdata")
-  filename <- "Output/DistanceOverSeaFORTESTS.csv"
+  filename <- "test_outputs/DistanceOverSeaFORTESTS.csv"
   expect_false(file.exists(filename))
   expect_no_error(find_shortest_route_in_sea(samplelocation, occurrence_data,
                                              tr, row, filename))
