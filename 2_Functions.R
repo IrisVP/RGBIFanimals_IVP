@@ -52,8 +52,9 @@ check_occurrence_data <- function(species){
     res <- read.csv(filename, header = TRUE)
   } else {
     try(res <- get_occurrence_data(species))
-    try(res <- get_occurrence_data(check_official_name(species)))
+    # try(res <- get_occurrence_data(check_official_name(species)))
     if(nrow(res)==0) stop("There is no information for this species found")
+    write.clean.csv(res, filename)
   }
   return(res)
 }
