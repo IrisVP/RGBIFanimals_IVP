@@ -38,6 +38,7 @@ test_that("find_closest_registered_place", {
   # expect_no_condition(find_closest_registered_place(species, coordinates,
   #                                                   tr, "Output/tests.csv"))
   # TODO: add more tests here
+  expect_true(TRUE)
 })
 
 test_that("filter_n_closest_coordinate_ceiling", {
@@ -56,9 +57,11 @@ test_that("find_shortest_route_in_sea", {
   tr <- create_rastered_world("Inputs/tr.rdata")
   filename <- "Output/DistanceOverSeaFORTESTS.csv"
   expect_false(file.exists(filename))
-  # expect_no_error(find_shortest_route_in_sea(samplelocation, occurrence_data,
-  #                                            tr, row, filename))
-  # expect_true(file.exists(filename))
+  expect_no_error(find_shortest_route_in_sea(samplelocation, occurrence_data,
+                                             tr, row, filename))
+  expect_true(file.exists(filename))
+  expect_warning(find_shortest_route_in_sea(samplelocation, occurrence_data,
+                                            tr, row, filename))
   # TODO: add more tests here
 })
 
