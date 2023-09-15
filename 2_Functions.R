@@ -47,15 +47,18 @@ get_occurrence_data <- function(species){
   return(res)
 }
 
-check_occurrence_data <- function(species){
-  filename = paste0("OccurrenceData/", species, ".csv")
-  if(file.exists(filename)){
+check_occurrence_data <- function(species, filename = TRUE) {
+  if (isTRUE(filename)) {
+    filename <- paste0("OccurrenceData/", species, ".csv")
+  }
+
+  if (file.exists(filename)) {
     res <- read.csv(filename, header = TRUE)
   } else {
     try(res <- get_occurrence_data(species))
     # try(res <- get_occurrence_data(check_official_name(species)))
-    if(nrow(res)==0) stop("There is no information for this species found")
-    write.clean.csv(res, filename)
+    if (nrow(res) == 0) stop("There is no information for this species found")
+    write.csv(res, filename)
   }
   return(res)
 }

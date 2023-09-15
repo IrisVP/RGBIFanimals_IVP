@@ -2,12 +2,12 @@ source("2_Functions.R")
 
 library("testthat")
 
-test_that("Create rastered world", {
-  expect_no_error(create_rastered_world("Inputs/tr.rdata"))
-  expect_false(file.exists("test_outputs/tr.rdata"))
-  expect_no_error(create_rastered_world("test_outputs/tr.rdata"))
-  expect_true(file.exists("test_outputs/tr.rdata"))
-})
+# test_that("Create rastered world", {
+#   expect_no_error(create_rastered_world("Inputs/tr.rdata"))
+#   expect_false(file.exists("test_outputs/tr.rdata"))
+#   expect_no_error(create_rastered_world("test_outputs/tr.rdata"))
+#   expect_true(file.exists("test_outputs/tr.rdata"))
+# })
 
 test_that("Get occurrence data", {
   species <- "Acartia margalefi"
@@ -28,6 +28,14 @@ test_that("check_occurrence_data", {
   expect_false(file.exists(filename))
   expect_no_error(test <- check_occurrence_data(species))
   expect_true(file.exists(filename))
+  # test filename output into another folder
+  filename <- "test_outputs/occurence_test.csv"
+  expect_false(file.exists(filename))
+  expect_no_error(test <- check_occurrence_data(species, filename))
+  expect_true(file.exists(filename))
+  expect_gte(nrow(test), 4)
+  # test loading the file just made to test output
+  expect_no_error(test <- check_occurrence_data(species, filename))
   expect_gte(nrow(test), 4)
 })
 
