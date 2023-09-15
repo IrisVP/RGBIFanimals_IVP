@@ -71,6 +71,11 @@ plot_distribution <- function(Coordinates, res, plotname, title){
 }
 
 find_closest_registered_place <- function(species, Coordinates, tr, outputfile, plot=TRUE){
+  # Add headers to the output file if it is not made already
+  if(!file.exists(outputfile)){
+    write.clean.csv(c("Speciesname", "Total observations", "Unique locations", 
+                      as.character(Coordinates$Observatory.ID), "Errors"), outputfile)
+  }
   # Check the occurrence data, If there is an error there it catches it and writes an error in the output file
   if(check_in_file(species, outputfile)){
     warning(paste(species, "has already been written to the file"))
@@ -95,11 +100,6 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
                      fun = distVincentyEllipsoid)
   # Find the closest point to every sampling location
   shortest <- round(apply(distances, 2, min), 0)
-  # Add headers to the output file if it is not made already
-  if(!file.exists(outputfile)){
-    write.clean.csv(c("Speciesname", "Total observations", "Unique locations", 
-                      as.character(Coordinates$Observatory.ID), "Errors"), outputfile)
-  }
   # Writing results to the file
   write.clean.csv(c(species, obs, uobs, shortest, ""), outputfile)
 }
@@ -189,5 +189,5 @@ check_in_file <- function(text, file){
 }
 
 check_official_name <- function(species){
-  return(wormsbynames(species)$valid_name)
+  return(worrmsbynames(species)$valid_name)
 }
