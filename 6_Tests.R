@@ -45,10 +45,9 @@ test_that("find_closest_registered_place", {
                             "Longitude" = 2.79178508,
                             "Latitude" = 51.6533567)
   tr <- create_rastered_world("Inputs/tr.rdata")
-  expect_no_condition(find_closest_registered_place(species, coordinates,
-                                                    tr, "test_outputs/tests.csv"))
+  expect_no_condition(find_closest_registered_place(species, coordinates, tr,
+                                                    "test_outputs/tests.csv"))
   # TODO: add more tests here
-  expect_true(TRUE)
 })
 
 test_that("filter_n_closest_coordinate_ceiling", {
