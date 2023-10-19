@@ -36,7 +36,6 @@ jobs:
           packages: |
             testthat
             gdistance
-            maptools
             dplyr
             geosphere
             rgbif
