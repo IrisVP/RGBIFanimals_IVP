@@ -1,6 +1,5 @@
 ################################### Load Packages ############################################
 library("gdistance")
-library("maptools")
 library("dplyr")
 require("geosphere")
 require("rgbif")
