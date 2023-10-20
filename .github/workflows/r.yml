@@ -45,5 +45,6 @@ jobs:
             worrms
             maps
             FRK
+            sf
       - name: Run the tests file
         run: Rscript 6_Tests.R
