@@ -9,6 +9,7 @@ library("worrms")
 library("sf")
 library("maps")
 library("FRK")
+library("rgdal")
 # library("maptools")
 
 ################################### Functions ################################################
