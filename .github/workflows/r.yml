@@ -33,7 +33,7 @@ jobs:
         run: brew install gdal
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          dependencies: hard
+          dependencies: '"hard"'
           packages: |
             testthat
             gdistance
