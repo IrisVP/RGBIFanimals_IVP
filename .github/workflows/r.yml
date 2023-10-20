@@ -42,5 +42,7 @@ jobs:
             ggplot2
             tidyr
             worrms
+            maps
+            FRK
       - name: Run the tests file
         run: Rscript 6_Tests.R

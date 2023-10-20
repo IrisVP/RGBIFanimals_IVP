@@ -7,6 +7,9 @@ library("ggplot2")
 library("tidyr")
 library("worrms")
 library("sf")
+library("maps")
+library("FRK")
+# library("maptools")
 
 ################################### Functions ################################################
 
@@ -17,8 +20,13 @@ create_rastered_world <- function(filename){
     return(tr)
   }
   # Load a map
-  data(wrld_simpl) #use wrld_simpl from the maptools package
-  
+  wrld_simpl2 <- map_data("world") # replacement of the old 
+  wrld_simpl <- df_to_SpatialPolygons(df = wrld_simpl2,
+                    keys = "region",
+                    coords = c("long", "lat"),
+                    proj = CRS("+proj=longlat +ellps=sphere"))
+  # data(wrld_simpl) #use wrld_simpl from the maptools package
+
   # Generate a scaffold for the raster file
   world_crs <- crs(wrld_simpl)
   worldshp <- spTransform(wrld_simpl, world_crs)
