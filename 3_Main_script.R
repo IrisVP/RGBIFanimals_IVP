@@ -4,7 +4,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # requires installat
 #load in the functions
 source("2_Functions.R")
 # Create a rastered world
-tr <- create_rastered_world("Inputs/tr.rdata")
+tr <- create_rastered_world("Inputs/new_tr.rdata")
 # Read a species list
 df <- read.csv("Output/Species_Location.csv")
 # Read coordinates file
@@ -14,7 +14,7 @@ sapply(df$Specieslist, function(species){
   print(species)
   tryCatch(find_closest_registered_place(species, Coordinates, tr, "Output/ShortestPath.csv"), error = function(e)return())
 })
- 
+
 long <- pivot_longer(df, !Specieslist)
 long <- long[long$value > 0, ]
 
@@ -36,5 +36,3 @@ rm(list = ls())
 results <- read.csv("Output/DistanceOverSea.csv")
 results <- results[!is.na(results$distance),]
 write.csv(results, "Output/DistanceOverSea.csv", quote = F, row.names = F)
-
-  
