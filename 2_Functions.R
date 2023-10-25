@@ -1,12 +1,14 @@
 ################################### Load Packages ############################################
 library("gdistance")
-library("maptools")
 library("dplyr")
 require("geosphere")
 require("rgbif")
 library("ggplot2")
 library("tidyr")
 library("worrms")
+library("sf")
+library("maps")
+library("FRK")
 
 ################################### Functions ################################################
 
@@ -17,8 +19,13 @@ create_rastered_world <- function(filename){
     return(tr)
   }
   # Load a map
-  data(wrld_simpl) #use wrld_simpl from the maptools package
-  
+  wrld_simpl2 <- map_data("world") # replacement of the old 
+  wrld_simpl <- df_to_SpatialPolygons(df = wrld_simpl2,
+                    keys = "region",
+                    coords = c("long", "lat"),
+                    proj = CRS("+proj=longlat +ellps=sphere"))
+  # data(wrld_simpl) #use wrld_simpl from the maptools package
+
   # Generate a scaffold for the raster file
   world_crs <- crs(wrld_simpl)
   worldshp <- spTransform(wrld_simpl, world_crs)
@@ -46,14 +53,18 @@ get_occurrence_data <- function(species){
   return(res)
 }
 
-check_occurrence_data <- function(species){
-  filename = paste0("OccurrenceData/", species, ".csv")
-  if(file.exists(filename)){
+check_occurrence_data <- function(species, filename = TRUE) {
+  if (isTRUE(filename)) {
+    filename <- paste0("OccurrenceData/", species, ".csv")
+  }
+
+  if (file.exists(filename)) {
     res <- read.csv(filename, header = TRUE)
   } else {
     try(res <- get_occurrence_data(species))
-    try(res <- get_occurrence_data(check_official_name(species)))
-    if(nrow(res)==0) stop("There is no information for this species found")
+    # try(res <- get_occurrence_data(check_official_name(species)))
+    if (nrow(res) == 0) stop("There is no information for this species found")
+    write.csv(res, filename)
   }
   return(res)
 }
@@ -70,6 +81,11 @@ plot_distribution <- function(Coordinates, res, plotname, title){
 }
 
 find_closest_registered_place <- function(species, Coordinates, tr, outputfile, plot=TRUE){
+  # Add headers to the output file if it is not made already
+  if(!file.exists(outputfile)){
+    write.clean.csv(c("Speciesname", "Total observations", "Unique locations", 
+                      as.character(Coordinates$Observatory.ID), "Errors"), outputfile)
+  }
   # Check the occurrence data, If there is an error there it catches it and writes an error in the output file
   if(check_in_file(species, outputfile)){
     warning(paste(species, "has already been written to the file"))
@@ -94,11 +110,6 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
                      fun = distVincentyEllipsoid)
   # Find the closest point to every sampling location
   shortest <- round(apply(distances, 2, min), 0)
-  # Add headers to the output file if it is not made already
-  if(!file.exists(outputfile)){
-    write.clean.csv(c("Speciesname", "Total observations", "Unique locations", 
-                      as.character(Coordinates$Observatory.ID), "Errors"), outputfile)
-  }
   # Writing results to the file
   write.clean.csv(c(species, obs, uobs, shortest, ""), outputfile)
 }
@@ -188,5 +199,5 @@ check_in_file <- function(text, file){
 }
 
 check_official_name <- function(species){
-  return(wormsbynames(species)$valid_name)
+  return(worrmsbynames(species)$valid_name)
 }
