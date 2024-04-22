@@ -4,15 +4,20 @@ library("tidyverse")
 
 #Set wd to wherever the script files are stored
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+### This line gets the directory of the file that is active/open in R
+### don't know if this is a good place to start, should be able to use files that are not opened
 dir <- getwd()
 
 #Load BOLDigger output
 Data <- read.csv(file = "Inputs/BOLDigger_output.csv", sep = ";", row.names = NULL)
+### header = TRUE could be added here
 
 #Extract locations of interest from main Data frame
 Locations_BOLD <- colnames(Data)
-Locations_BOLD <- as.data.frame(stringr::str_split_fixed(string = Locations_BOLD, pattern = "\\.", 2))
-LOI <- c("Toralla", "Getxo", "Vigo", "Roscoff", "Plymouth", "Galway", "BelgianCoast", "Bjorko", "Gbg", "Helsingborg", "Hjuvik", "Koster", "Laesoe1", "Laesoe2", "Laesoe3", "Limfjord", "Marstrand", "Preemraff", "Varberg", "Gdynia", "TZS")
+Locations_BOLD <- as.data.frame(stringr::str_split_fixed(string = Locations_BOLD, pattern = "\\.", 2)) #split column names based on \\.?
+LOI <- c("Toralla", "Getxo", "Vigo", "Roscoff", "Plymouth", "Galway", "BelgianCoast", "Bjorko", "Gbg",
+         "Helsingborg", "Hjuvik", "Koster", "Laesoe1", "Laesoe2", "Laesoe3", "Limfjord", "Marstrand", "Preemraff",
+         "Varberg", "Gdynia", "TZS")
 Locations_BOLD <- Locations_BOLD %>% 
   filter(V1 %in% LOI)
 #Paste colnames back together for later filtering steps
