@@ -12,39 +12,61 @@ dir <- getwd()
 Data <- read.csv(file = "Inputs/BOLDigger_output.csv", sep = ";", row.names = NULL)
 ### header = TRUE could be added here
 
+###########################################################################################
+#FILTERING STEP
+#filter columnnames of BOLDigger file on locations of interest: make dataframe Locations_BOLD
+#in V3 of this dataframe: result of filtering and combining V2 and V1 again.
+###########################################################################################
+
 #Extract locations of interest from main Data frame
 Locations_BOLD <- colnames(Data)
 Locations_BOLD <- as.data.frame(stringr::str_split_fixed(string = Locations_BOLD, pattern = "\\.", 2)) #split column names based on \\.?
 LOI <- c("Toralla", "Getxo", "Vigo", "Roscoff", "Plymouth", "Galway", "BelgianCoast", "Bjorko", "Gbg",
          "Helsingborg", "Hjuvik", "Koster", "Laesoe1", "Laesoe2", "Laesoe3", "Limfjord", "Marstrand", "Preemraff",
          "Varberg", "Gdynia", "TZS")
-Locations_BOLD <- Locations_BOLD %>% 
-  filter(V1 %in% LOI)
+Locations_BOLD <- Locations_BOLD %>% ### %>% = pipe operator, joins filter function in next line
+  filter(V1 %in% LOI)  ### %in% checks if LOI is present in column V1 (for filtering of df)
 #Paste colnames back together for later filtering steps
 Locations_BOLD$V3 <- paste0(Locations_BOLD$V1, ".", Locations_BOLD$V2)
+
+###########################################################################################
+#METADATA STEP
+#replace missing values to NA and remove NA values. Join V1 and V3 into MetaData
+#
+###########################################################################################
 
 #### Metadata ####
 MetaData <- read.csv("Inputs/MetaData.csv")
 #Select applicable ARMS deployments
 MetaData <- left_join(MetaData, Locations_BOLD, by = c("Filename" = "V3"))
+### here you add V1 and V2 from Locations_BOLD to the table of metadata
 #Clean-up of data
-MetaData <- MetaData %>% dplyr::select(-starts_with("X"), -V1, -V2)
-MetaData <- MetaData %>% na_if("") %>% na.omit
-MetaData <- MetaData[complete.cases(MetaData), ]
+MetaData <- MetaData %>% dplyr::select(-starts_with("X"), -V1, -V2) ### remove column V1, V2 and column starting with X
+
+MetaData[MetaData == ""] <- NA ### Replace blank by NA
+###is.na(MetaData) # check if there are any NA
+
+MetaData <- na.omit(MetaData)  ###remove missing values
+MetaData <- MetaData[complete.cases(MetaData), ]  ###remove rows with missing values
 MetaData$Year <- format(as.Date(MetaData$Deployment_date), "%Y")
-MetaData$Location_Year <- paste0(MetaData$Observatory.ID, "_", MetaData$Year)
+### adding extra column with combination of Observatory.ID and year
+MetaData$Location_Year <- paste0(MetaData$Observatory.ID, "_", MetaData$Year) 
 #Add column in which ARMS fraction is removed
 MetaData$No_Fraction <- MetaData$Filename
 MetaData$No_Fraction <- sub("\\.MF.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.MT.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.SF40", "", MetaData$No_Fraction)
+######################################################################
 
+######################################################################
 #Determine taxonomy order
 Taxonomy <- c("Phylum", "Class", "Order", "Family", "Genus", "Species")
 
 #### Solve species name issues main df ####
+
 #Merge Genus and species into Specieslist
-Data$Specieslist <- paste(Data$Genus, Data$Species)
+Data$Specieslist <- paste(Data$Genus, Data$Species, sep = " ")
+
 #Replace , with . in Similarity, to be able to assign numeric variable
 Data$Similarity <- gsub(",", ".", x = Data$Similarity, fixed = T)
 #Substitute species names with synonyms
@@ -69,6 +91,7 @@ Data_LOI <- Data_LOI[rowSums(Data_LOI[, 10:ncol(Data_LOI)])>0, ]
 rownames(Data_LOI) <- c(1:nrow(Data_LOI))
 rm(RemovePhyla, RemoveSpecies)
 
+#################################################################### until here
 #### Set of additional dataframes for additional insight ####
 #Extract unique species with their corresponding lowest Similarity
 Uniques <- Data_LOI %>% 
