@@ -133,20 +133,21 @@ RC_Species_Loc_Year <- Data_LOI[, c(Taxonomy[1:4], "Specieslist", MetaData$Filen
 #Create duplicate column names
 colnames(RC_Species_Loc_Year) <- c(Taxonomy[1:4], "Specieslist", MetaData$Location_Year)
 df <- RC_Species_Loc_Year
-#Merge columns with duplicate names and sum contents ######################################################################################
+#Merge columns with duplicate names and sum contents 
 df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
 RC_Species_Loc_Year <- as.data.frame(cbind(df2, df[,!duplicated(colnames(df)) & !duplicated(colnames(df), fromLast = TRUE)]))
 rm(df, df2)
 #group by Specieslist and sum read counts locations
 RC_Species_Loc_Year <- RC_Species_Loc_Year %>% 
-  relocate(Phylum:Specieslist, .before = BelgianCoast_2018) %>% 
-  mutate_at(c(6:ncol(RC_Species_Loc_Year)), as.numeric) %>%
-  group_by(Phylum, Class, Order, Family, Specieslist,) %>% 
-  summarise(across(BelgianCoast_2018:Vigo_2019, sum))
+  relocate(Phylum:Specieslist, .before = BelgianCoast_2018) %>% # relocates columns phylum -> specieslist before BelgianCoast
+  mutate_at(c(6:ncol(RC_Species_Loc_Year)), as.numeric) %>% #turn columns 6 to end to numeric
+  group_by(Phylum, Class, Order, Family, Specieslist,) %>%  # group by columns
+  summarise(across(BelgianCoast_2018:Vigo_2019, sum))  #summarise columns belgiancoast->vigo
 
 #Presence/Absence matrix for Species per ARMS
 Pres_Abs <- Read_Count_Species_ARMS
-Pres_Abs[2:ncol(Pres_Abs)][Pres_Abs[2:ncol(Pres_Abs)] > 0] <- 1
+Pres_Abs[2:ncol(Pres_Abs)][Pres_Abs[2:ncol(Pres_Abs)] > 0] <- 1 
+# if nr. in columns 2-> last column are > 0, enter 1
 
 #Read count per species per fraction
 Read_Count_Species_Fraction <- Data_LOI  %>%
@@ -172,7 +173,9 @@ Species_Location <- Data_LOI  %>%
   dplyr::select(Specieslist, sort(colnames(.))) %>%
   group_by(Specieslist) %>%
   summarise_all(sum)
-colnames(Species_Location) <- c("Specieslist", MetaData$Observatory.ID)
+### THIS IS THE SAME AS Read_Count_Species_Fraction
+
+colnames(Species_Location) <- c("Specieslist", MetaData$Observatory.ID) #make df with Specieslist and Observatory.ID
 df <- Species_Location
 #Merge columns with duplicate names and sum contents
 df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
