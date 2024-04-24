@@ -91,15 +91,17 @@ Data_LOI <- Data_LOI[rowSums(Data_LOI[, 10:ncol(Data_LOI)])>0, ]
 rownames(Data_LOI) <- c(1:nrow(Data_LOI))
 rm(RemovePhyla, RemoveSpecies)
 
-#################################################################### until here
+####################################################################
 #### Set of additional dataframes for additional insight ####
+######################################################################
 #Extract unique species with their corresponding lowest Similarity
 Uniques <- Data_LOI %>% 
   dplyr::select(Specieslist, Similarity) %>% 
-  arrange(Specieslist) %>%
-  distinct() %>%
-  group_by(Specieslist) %>%
-  slice_min(order_by = Similarity, with_ties = T)
+  arrange(Specieslist) %>%   # order alphabetically on specieslist
+  distinct() %>%    # select distinct, remove duplicates
+  group_by(Specieslist) %>%   # group data on specieslist
+  slice_min(order_by = Similarity, with_ties = T)  # select rows with minimal similarity
+# in the groups of specieslist. Ties => if more than 1 row with same similarity, keep them
 
 #ASV count for each species
 ASV_Count <- Data_LOI[!duplicated(Data_LOI$sequence), ] %>% dplyr::count(Specieslist)
@@ -109,10 +111,13 @@ ASV_Count <- Data_LOI[!duplicated(Data_LOI$sequence), ] %>% dplyr::count(Species
 df <- Data_LOI
 colnames(df) <- c("sequence", Taxonomy, "Specieslist", "Similarity", MetaData$No_Fraction)
 Column_Order <- unique(colnames(df))
+
+##################################################################################
 #Merge columns with duplicate names and sum contents
 df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
 Read_Count_ASVs_ARMS <- cbind(df2, df[,!duplicated(colnames(df)) & !duplicated(colnames(df), fromLast = TRUE)])
 rm(df, df2)
+####################################################################################
 
 #Read count per Species, per ARMS, per year
 Read_Count_Species_ARMS <- Read_Count_ASVs_ARMS %>%
@@ -128,7 +133,7 @@ RC_Species_Loc_Year <- Data_LOI[, c(Taxonomy[1:4], "Specieslist", MetaData$Filen
 #Create duplicate column names
 colnames(RC_Species_Loc_Year) <- c(Taxonomy[1:4], "Specieslist", MetaData$Location_Year)
 df <- RC_Species_Loc_Year
-#Merge columns with duplicate names and sum contents
+#Merge columns with duplicate names and sum contents ######################################################################################
 df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
 RC_Species_Loc_Year <- as.data.frame(cbind(df2, df[,!duplicated(colnames(df)) & !duplicated(colnames(df), fromLast = TRUE)]))
 rm(df, df2)
