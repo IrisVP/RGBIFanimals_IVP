@@ -19,12 +19,12 @@ create_rastered_world <- function(filename){
     return(tr)
   }
   # Load a map
-  wrld_simpl2 <- map_data("world") # replacement of the old 
+  wrld_simpl2 <- map_data("world") # comes from ggplot2
   wrld_simpl <- df_to_SpatialPolygons(df = wrld_simpl2,
                     keys = "region",
                     coords = c("long", "lat"),
                     proj = CRS("+proj=longlat +ellps=sphere"))
-  # data(wrld_simpl) #use wrld_simpl from the maptools package
+  # data(wrld_simpl)
 
   # Generate a scaffold for the raster file
   world_crs <- crs(wrld_simpl)
@@ -63,7 +63,7 @@ check_occurrence_data <- function(species, filename = TRUE) {
   } else {
     try(res <- get_occurrence_data(species))
     # try(res <- get_occurrence_data(check_official_name(species)))
-    if (nrow(res) == 0) stop("There is no information for this species found")
+    if (nrow(res) == 0) stop("No information found for this species")
     write.csv(res, filename)
   }
   return(res)
@@ -91,20 +91,21 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
     warning(paste(species, "has already been written to the file"))
     return()
   }
-  tryCatch(res <- check_occurrence_data(species),
-           error = function(errormessage){
+  tryCatch(res <- check_occurrence_data(species),    ### line 56
+           ### this function has another function with error
+           error = function(errormessage){           ### new function in function
              write.clean.csv(c(species, rep("", 15), "ERROR while getting the occurrence data"),
-                             outputfile)
+                             outputfile)   ### don't get which csv this is ####
            })
-  obs = nrow(res)
+  obs <- nrow(res)
   # Plot the distribution
-  plotname = paste0("plots/", species, ".jpeg")
+  plotname <- paste0("plots/", species, ".jpeg")
   if(plot & !file.exists(plotname)){
-    plot_distribution(Coordinates, res, plotname, species)
+    plot_distribution(Coordinates, res, plotname, species)  ### line 72
   }
   # Remove duplicate coordinates
   res <- res[!duplicated(res),]
-  uobs = nrow(res)
+  uobs <- nrow(res)  # unique observations
   # Calculate the distances between all the points and all the locations
   distances <- distm(res[, c("Longitude", "Latitude")], Coordinates[, c("Longitude", "Latitude")], 
                      fun = distVincentyEllipsoid)
@@ -123,6 +124,7 @@ filter_n_closest_coordinate_ceiling <- function(n, occurrence_data, samplelocati
   return(occurrence_data)
 }
 
+### this script is not used in 3_Main_script.R
 sp_format <- function(coordinates){
   return(structure(as.numeric(c(coordinates["Longitude"], coordinates["Latitude"])), .Dim = 1:2))
 }
@@ -131,6 +133,7 @@ find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row,
   if(!file.exists(filename)){
     write.clean.csv(c(names(row), "inrange", "pointscalculated","distance"), filename)
   }
+  ### checks if combination of row1 and 2 is already present, if so, there is a warning
   if(check_in_file(row[1:2], filename)){
     warning(paste(c(as.character(row[1:2]), "has already been written"), collapse=" "))
     return()
@@ -158,6 +161,7 @@ find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row,
   write.clean.csv(row, filename)
 }
 
+### this function isn't being used!
 plot_shortest_path <- function(path, SampleLocation, findLocations){
   ggplot() +
     geom_polygon(aes(x = long, y = lat, group = group), data = map_data("world")) +
@@ -174,7 +178,8 @@ filter_on_distance <- function(tr, samplelocation, occurrence_data){
   # step1: calculate all distances to samplelocation
   distances <- as.numeric(distm(samplelocation[,c("Longitude", "Latitude")], 
                      occurrence_data[,c("Longitude", "Latitude")], 
-                     fun = distVincentyEllipsoid))
+                     fun = distVincentyEllipsoid))  
+  ### 'fun =' which method is used = this method is for distances on earth (ellipsoid)
   # step2: Calculate the length through sea for the closest point
   sea_dist <-  geosphere::lengthLine(shortestPath(tr, sp_format(samplelocation), 
                                                   sp_format(occurrence_data[which.min(distances),]), 

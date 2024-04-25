@@ -11,15 +11,16 @@ df <- read.csv("Output/Species_Location.csv")
 Coordinates <- read.csv("Inputs/Coordinates.csv")
 # Find the shortest path for each sampling location to the species observation (as the crow flies)
 sapply(df$Specieslist, function(species){
-  print(species)
+  #print(species)
   tryCatch(find_closest_registered_place(species, Coordinates, tr, "Output/ShortestPath.csv"), error = function(e)return())
 })
 
 long <- pivot_longer(df, !Specieslist)
 long <- long[long$value > 0, ]
 
-apply(long, 1, function(row){
+apply(long, 1, function(row){   ### function on dataframe "long" on each "row"
   samplelocation <- Coordinates[Coordinates$Observatory.ID == row[2], c("Longitude", "Latitude")]
+  ### selects longitude & latitude of location of observaroty.ID (second element in row)
   print(row[1])
   tryCatch({occurrence_data <- check_occurrence_data(row[1])
             find_shortest_route_in_sea(samplelocation, occurrence_data, tr, row, "Output/DistanceOverSea.csv")},

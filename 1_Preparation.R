@@ -4,13 +4,10 @@ library("tidyverse")
 
 #Set wd to wherever the script files are stored
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-### This line gets the directory of the file that is active/open in R
-### don't know if this is a good place to start, should be able to use files that are not opened
 dir <- getwd()
 
 #Load BOLDigger output
-Data <- read.csv(file = "Inputs/BOLDigger_output.csv", sep = ";", row.names = NULL)
-### header = TRUE could be added here
+Data <- read.csv("Inputs/BOLDigger_output.csv", sep = ";", row.names = NULL, header = TRUE)
 
 ###########################################################################################
 #FILTERING STEP
@@ -20,34 +17,32 @@ Data <- read.csv(file = "Inputs/BOLDigger_output.csv", sep = ";", row.names = NU
 
 #Extract locations of interest from main Data frame
 Locations_BOLD <- colnames(Data)
-Locations_BOLD <- as.data.frame(stringr::str_split_fixed(string = Locations_BOLD, pattern = "\\.", 2)) #split column names based on \\.?
+Locations_BOLD <- as.data.frame(stringr::str_split_fixed(string = Locations_BOLD, pattern = "\\.", 2)) #split column names based on .
 LOI <- c("Toralla", "Getxo", "Vigo", "Roscoff", "Plymouth", "Galway", "BelgianCoast", "Bjorko", "Gbg",
          "Helsingborg", "Hjuvik", "Koster", "Laesoe1", "Laesoe2", "Laesoe3", "Limfjord", "Marstrand", "Preemraff",
          "Varberg", "Gdynia", "TZS")
-Locations_BOLD <- Locations_BOLD %>% ### %>% = pipe operator, joins filter function in next line
-  filter(V1 %in% LOI)  ### %in% checks if LOI is present in column V1 (for filtering of df)
+Locations_BOLD <- Locations_BOLD %>% # %>% = pipe operator, joins filter function in next line
+  filter(V1 %in% LOI)  # %in% checks if LOI is present in column V1 (for filtering of df)
 #Paste colnames back together for later filtering steps
 Locations_BOLD$V3 <- paste0(Locations_BOLD$V1, ".", Locations_BOLD$V2)
 
 ###########################################################################################
 #METADATA STEP
 #replace missing values to NA and remove NA values. Join V1 and V3 into MetaData
-#
 ###########################################################################################
 
 #### Metadata ####
 MetaData <- read.csv("Inputs/MetaData.csv")
 #Select applicable ARMS deployments
 MetaData <- left_join(MetaData, Locations_BOLD, by = c("Filename" = "V3"))
-### here you add V1 and V2 from Locations_BOLD to the table of metadata
+# here you add V1 and V2 from Locations_BOLD to the table of metadata
 #Clean-up of data
-MetaData <- MetaData %>% dplyr::select(-starts_with("X"), -V1, -V2) ### remove column V1, V2 and column starting with X
+MetaData <- MetaData %>% dplyr::select(-starts_with("X"), -V1, -V2) # remove column V1, V2 and column starting with X
 
-MetaData[MetaData == ""] <- NA ### Replace blank by NA
-###is.na(MetaData) # check if there are any NA
+MetaData[MetaData == ""] <- NA # Replace blank by NA
 
-MetaData <- na.omit(MetaData)  ###remove missing values
-MetaData <- MetaData[complete.cases(MetaData), ]  ###remove rows with missing values
+MetaData <- na.omit(MetaData)  # remove missing values
+MetaData <- MetaData[complete.cases(MetaData), ]  # remove rows with missing values
 MetaData$Year <- format(as.Date(MetaData$Deployment_date), "%Y")
 ### adding extra column with combination of Observatory.ID and year
 MetaData$Location_Year <- paste0(MetaData$Observatory.ID, "_", MetaData$Year) 
@@ -140,7 +135,7 @@ rm(df, df2)
 #group by Specieslist and sum read counts locations
 RC_Species_Loc_Year <- RC_Species_Loc_Year %>% 
   relocate(Phylum:Specieslist, .before = BelgianCoast_2018) %>% # relocates columns phylum -> specieslist before BelgianCoast
-  mutate_at(c(6:ncol(RC_Species_Loc_Year)), as.numeric) %>% #turn columns 6 to end to numeric
+  mutate_at(c(6:ncol(RC_Species_Loc_Year)), as.numeric) %>% #turn columns 6->end to numeric
   group_by(Phylum, Class, Order, Family, Specieslist,) %>%  # group by columns
   summarise(across(BelgianCoast_2018:Vigo_2019, sum))  #summarise columns belgiancoast->vigo
 
@@ -168,14 +163,10 @@ write.csv(Read_Count_Species_Fraction, "Read_Count_Species_Fraction.csv", row.na
 write.csv(Data_LOI, "Data_LOI.csv", row.names = FALSE)
 
 #### Build dataframe to be used in AlienIdentification.R ####
-Species_Location <- Data_LOI  %>%
-  dplyr::select(-sequence, -Phylum, -Order, -Class, -Family, -Genus, -Species, -Similarity) %>%
-  dplyr::select(Specieslist, sort(colnames(.))) %>%
-  group_by(Specieslist) %>%
-  summarise_all(sum)
-### THIS IS THE SAME AS Read_Count_Species_Fraction
+Species_Location <- Read_Count_Species_Fraction
+### THIS IS THE SAME AS Read_Count_Species_Fraction => removed duplicate code
 
-colnames(Species_Location) <- c("Specieslist", MetaData$Observatory.ID) #make df with Specieslist and Observatory.ID
+colnames(Species_Location) <- c("Specieslist", MetaData$Observatory.ID) #make df Specices_Location with Specieslist and Observatory.ID
 df <- Species_Location
 #Merge columns with duplicate names and sum contents
 df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
