@@ -6,7 +6,7 @@ source("2_Functions.R")
 # Create a rastered world
 tr <- create_rastered_world("Inputs/new_tr.rdata")
 # Read a species list
-df <- read.csv("Output/Species_Location.csv")
+df <- read.csv("Output/Test_10Species_Location.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
 # Find the shortest path for each sampling location to the species observation (as the crow flies)

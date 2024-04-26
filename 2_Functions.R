@@ -95,7 +95,7 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
            ### this function has another function with error
            error = function(errormessage){           ### new function in function
              write.clean.csv(c(species, rep("", 15), "ERROR while getting the occurrence data"),
-                             outputfile)   ### don't get which csv this is ####
+                             outputfile)
            })
   obs <- nrow(res)
   # Plot the distribution
