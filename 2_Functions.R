@@ -118,9 +118,10 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
 filter_n_closest_coordinate_ceiling <- function(n, occurrence_data, samplelocation){
   occurrence_data$distance <- pmax(abs(occurrence_data$Longitude - samplelocation$Longitude), 
                                    abs(occurrence_data$Latitude - samplelocation$Latitude))
+  # pmax is used to get element-wise maximum, abs() to get absolute differences
   # Get the n-th smallest distance and round it up
-  dist = ceiling(sort(occurrence_data$distance)[n])
-  occurrence_data <- occurrence_data[occurrence_data$distance < dist,]
+  dist = ceiling(sort(occurrence_data$distance)[n]) #sorted ascending and select smallest distance and round up
+  occurrence_data <- occurrence_data[occurrence_data$distance < dist,] # keep rows where distance is less than 'dist'
   return(occurrence_data)
 }
 
