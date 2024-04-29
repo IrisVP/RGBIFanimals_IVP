@@ -44,7 +44,7 @@ create_rastered_world <- function(filename){
 }
 
 get_occurrence_data <- function(species){
-  res = occ_data(scientificName = species, hasCoordinate = TRUE, limit = 200000)
+  res = occ_data(scientificName = species, hasCoordinate = TRUE, limit = 100000) #changed limit, was 200000
   res <- res$data[, c('decimalLongitude', 'decimalLatitude')]
   #rename the column names
   colnames(res) <- c('Longitude', 'Latitude')
@@ -112,7 +112,7 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
   # Find the closest point to every sampling location
   shortest <- round(apply(distances, 2, min), 0)
   # Writing results to the file
-  write.clean.csv(c(species, obs, uobs, shortest, ""), outputfile)
+  write.clean.csv(c(species, obs, uobs, shortest, ""), outputfile) ### outputfile = shortestpath.csv
 }
 
 filter_n_closest_coordinate_ceiling <- function(n, occurrence_data, samplelocation){
@@ -130,9 +130,10 @@ sp_format <- function(coordinates){
   return(structure(as.numeric(c(coordinates["Longitude"], coordinates["Latitude"])), .Dim = 1:2))
 }
 
-find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row, filename){
+
+find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row, filename){ # filename = Output/DistanceOverSea.csv
   if(!file.exists(filename)){
-    write.clean.csv(c(names(row), "inrange", "pointscalculated","distance"), filename)
+    write.clean.csv(c(names(row), "inrange", "pointscalculated","distance"), filename) # filename = Output/DistanceOverSea.csv
   }
   ### checks if combination of row1 and 2 is already present, if so, there is a warning
   if(check_in_file(row[1:2], filename)){

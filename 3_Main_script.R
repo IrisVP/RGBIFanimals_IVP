@@ -18,11 +18,20 @@ sapply(df$Specieslist, function(species){
 long <- pivot_longer(df, !Specieslist)
 long <- long[long$value > 0, ]
 
+
+# make a file called samplelocation with only longitude and latitude for each species
+samplelocation <- data.frame(Longitude = numeric(0), Latitude = numeric(0))
+for (r in 1:nrow(Coordinates)) {
+  # Find the coordinates for the current Observatory ID => extract Longitude and Latitude
+  current_coordinates <- Coordinates[r,2-3]
+  # print(current_coordinates)   = if necessary
+  # Append the coordinates to the 'samplelocation' dataframe
+  samplelocation <- rbind(samplelocation, current_coordinates)
+}
+
 apply(long, 1, function(row){   ### function on dataframe "long" on each "row"
-  samplelocation <- Coordinates[Coordinates$Observatory.ID == row[2], c("Longitude", "Latitude")]
-  ### selects longitude & latitude of location of observaroty.ID (second element in row)
-  print(row[1])
   tryCatch({occurrence_data <- check_occurrence_data(row[1])
+  ### works until here, with limit of occ_data set to 500 not 200,000
             find_shortest_route_in_sea(samplelocation, occurrence_data, tr, row, "Output/DistanceOverSea.csv")},
            error = function(errormessage){
              write.table(paste(c(row, 0, 0, NA), collapse = ","), file = "Output/DistanceOverSea.csv", 
