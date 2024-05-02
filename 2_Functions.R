@@ -125,10 +125,11 @@ filter_n_closest_coordinate_ceiling <- function(n, occurrence_data, samplelocati
   return(occurrence_data)
 }
 
-### this script is not used in 3_Main_script.R
 sp_format <- function(coordinates){
-  return(structure(as.numeric(c(coordinates["Longitude"], coordinates["Latitude"])), .Dim = 1:2))
-}
+  #return(structure(as.numeric(c(coordinates$Longitude, coordinates$Latitude)), .Dim = 1:2))
+  return(as.matrix(coordinates[, c("Longitude", "Latitude")]))
+  
+}  # making a matrix out of the coordinates from dataframe.
 
 
 find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row, filename){ # filename = Output/DistanceOverSea.csv
@@ -153,7 +154,7 @@ find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row,
   row$pointscalculated <- nrow(occurrence_data)
   # find the shortest route to every point through the sea
   paths <- sapply(1:nrow(occurrence_data), function(i) {
-    path <- shortestPath(tr, sp_format(samplelocation), 
+    path <- shortestPath(tr, sp_format(samplelocation),    ### function sp_format!!!!
                          sp_format(occurrence_data[i,]), 
                          output = "SpatialLines")
     return(path)
@@ -176,22 +177,23 @@ plot_shortest_path <- function(path, SampleLocation, findLocations){
     geom_label_repel(aes(x= Longitude, y = Latitude, label = Observatory.ID), data = SampleLocation)
 }
 
-filter_on_distance <- function(tr, samplelocation, occurrence_data){
+filter_on_distance <- function(tr, samplelocation, unique_file){
   # step1: calculate all distances to samplelocation
   distances <- as.numeric(distm(samplelocation[,c("Longitude", "Latitude")], 
-                     occurrence_data[,c("Longitude", "Latitude")], 
+                     unique_file[,c("Longitude", "Latitude")], 
                      fun = distVincentyEllipsoid))  
   ### 'fun =' which method is used = this method is for distances on earth (ellipsoid)
   # step2: Calculate the length through sea for the closest point
-  sea_dist <-  geosphere::lengthLine(shortestPath(tr, sp_format(samplelocation), 
-                                                  sp_format(occurrence_data[which.min(distances),]), 
+  unique_file <- which.min(distances)
+  sea_dist <-  geosphere::lengthLine(shortestPath(tr, sp_format(samplelocation), #function sp_format!
+                                                  sp_format(unique_file), 
                                                   output = "SpatialLines"))
   # step3: filter out the datapoints further away than the sea_dist
-  filtered <- occurrence_data[distances <= sea_dist,]
+  filtered <- unique_file[distances <= sea_dist,]
   if(nrow(filtered) > 0){
     return(filtered)
   } else {
-    occurrence_data[distances <= sea_dist + 16000,]
+    unique_file[distances <= sea_dist + 16000,]
   }
 }
 
@@ -203,6 +205,12 @@ write.clean.csv <- function(list, outputfile){
 check_in_file <- function(text, file){
   contents <- readChar(file, file.info(file)$size)
   return(length(grep(paste(text, collapse = ","), contents))>0)
+  #char <- grep(paste(text, collapse = ",") ,contents)
+  #if(length(char) > 0){
+    #return(TRUE)  # Retourneer TRUE als er overeenkomsten zijn gevonden
+  #} else {
+    #return(FALSE)  # Retourneer FALSE als er geen overeenkomsten zijn gevonden
+  #}
 }
 
 check_official_name <- function(species){

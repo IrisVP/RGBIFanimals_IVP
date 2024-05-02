@@ -52,37 +52,34 @@ for (n in 1:nrow(df)){
     write.clean.csv(c(names(row), "inrange", "pointscalculated","distance"), filename)
   }
   ### checks if combination of row1 and 2 is already present, if so, there is a warning
-  if(check_in_file(row[1:2], filename)){   ############################ check in file function!!!!!!
-    
-      contents <- readChar(file, file.info(file)$size)   # file = filename = Occurrence data csv's
-      return(length(grep(paste(text, collapse = ","), contents))>0)
-    
-    
-    warning(paste(c(as.character(row[1:2]), "has already been written"), collapse=" "))
+  if(check_in_file(df[n, 1:2], filename)){   #### check if csv Occurrence data exists
+    warning(paste(c(as.character(df[n, 1:2]), "has already been written"), collapse=" "))
   }
-}
-  
   # Remove duplicates
-  occurrence_data <- occurrence_data[!duplicated(occurrence_data),]
+  file <- read.csv(filename, header = TRUE)
+  unique_file <- file[!duplicated(file[, c("Longitude", "Latitude")]), ]  # unique longitudes + latitudes
+  # OccurrenceData <- OccurrenceData[!duplicated(OccurrenceData),]    ==== original lines
   # Remove samples taken further away than the closest point
-  occurrence_data <- filter_on_distance(tr, samplelocation, occurrence_data)
-  # Filter if there are more than 10 unique locations
-  row$inrange <- nrow(occurrence_data)
-  if(nrow(occurrence_data) > 10){
-    occurrence_data <- filter_n_closest_coordinate_ceiling(10, occurrence_data, samplelocation)
-  }
-  # Save the number of points for which the distance will be calculated
-  row$pointscalculated <- nrow(occurrence_data)
-  # find the shortest route to every point through the sea
-  paths <- sapply(1:nrow(occurrence_data), function(i) {
-    path <- shortestPath(tr, sp_format(samplelocation), 
-                         sp_format(occurrence_data[i,]), 
-                         output = "SpatialLines")
-    return(path)
-  })
-  # Find the closest location the point of sampling
-  row$distance <- min(as.numeric(sapply(paths, function(x) geosphere::lengthLine(x))), na.rm=T)
-  write.clean.csv(row, filename)
+  OccurrenceData <- filter_on_distance(tr, samplelocation, unique_file) # here
+}
+
+# Filter if there are more than 10 unique locations
+row$inrange <- nrow(OccurrenceData)
+if(nrow(occurrence_data) > 10){
+  occurrence_data <- filter_n_closest_coordinate_ceiling(10, occurrence_data, samplelocation)
+}
+# Save the number of points for which the distance will be calculated
+row$pointscalculated <- nrow(occurrence_data)
+# find the shortest route to every point through the sea
+paths <- sapply(1:nrow(occurrence_data), function(i) {
+  path <- shortestPath(tr, sp_format(samplelocation), 
+                       sp_format(occurrence_data[i,]), 
+                       output = "SpatialLines")
+  return(path)
+})
+# Find the closest location the point of sampling
+row$distance <- min(as.numeric(sapply(paths, function(x) geosphere::lengthLine(x))), na.rm=T)
+write.clean.csv(row, filename)
 
 
 
