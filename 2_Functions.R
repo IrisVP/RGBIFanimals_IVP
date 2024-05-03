@@ -124,13 +124,14 @@ filter_n_closest_coordinate_ceiling <- function(n, occurrence_data, samplelocati
   occurrence_data <- occurrence_data[occurrence_data$distance < dist,] # keep rows where distance is less than 'dist'
   return(occurrence_data)
 }
-
+######################################################################################
 sp_format <- function(coordinates){
   #return(structure(as.numeric(c(coordinates$Longitude, coordinates$Latitude)), .Dim = 1:2))
-  return(as.matrix(coordinates[, c("Longitude", "Latitude")]))
+  #return(as.matrix(coordinates[, c("Longitude", "Latitude")]))
+  return(matrix(as.numeric(c(coordinates$Longitude, coordinates$Latitude)), ncol = 2))
   
 }  # making a matrix out of the coordinates from dataframe.
-
+####################################################################################
 
 find_shortest_route_in_sea <- function(samplelocation, occurrence_data, tr, row, filename){ # filename = Output/DistanceOverSea.csv
   if(!file.exists(filename)){
@@ -185,8 +186,12 @@ filter_on_distance <- function(tr, samplelocation, unique_file){
   ### 'fun =' which method is used = this method is for distances on earth (ellipsoid)
   # step2: Calculate the length through sea for the closest point
   unique_file <- which.min(distances)
-  sea_dist <-  geosphere::lengthLine(shortestPath(tr, sp_format(samplelocation), #function sp_format!
-                                                  sp_format(unique_file), 
+  ### make matrices out of longitudes and latitudes of samplelocation and unique_file
+  sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
+  uniquefile_matrix <- matrix(as.numeric(c(unique_file$Longitude, unique_file$Latitude)), ncol = 2)
+  
+  sea_dist <-  geosphere::lengthLine(shortestPath(tr, sampleloc_matrix, #function sp_format!
+                                                  uniquefile_matrix, 
                                                   output = "SpatialLines"))
   # step3: filter out the datapoints further away than the sea_dist
   filtered <- unique_file[distances <= sea_dist,]
