@@ -60,14 +60,22 @@ for (n in 1:nrow(df)){
   unique_file <- file[!duplicated(file[, c("Longitude", "Latitude")]), ]  # unique longitudes + latitudes
   # OccurrenceData <- OccurrenceData[!duplicated(OccurrenceData),]    ==== original lines
   # Remove samples taken further away than the closest point
-  OccurrenceData <- filter_on_distance(tr, samplelocation, unique_file) # here
+  OccurrenceData <- filter_on_distance(tr, samplelocation, unique_file) ### return filtered into OccurrenceData
+  # Filter if there are more than 10 unique locations
+  df$inrange <- nrow(OccurrenceData)
+  if(nrow(OccurrenceData) > 10){
+    ###OccurrenceData <- filter_n_closest_coordinate_ceiling(10, OccurrenceData, samplelocation)
+    OccurrenceData$distance <- pmax(abs(OccurrenceData$Longitude - samplelocation$Longitude), 
+                                     abs(OccurrenceData$Latitude - samplelocation$Latitude))
+    # pmax is used to get element-wise maximum, abs() to get absolute differences
+    # Get the n-th smallest distance and round it up
+    dist = ceiling(sort(OccurrenceData$distance)[n]) #sorted ascending and select smallest distance and round up
+    OccurrenceData <- OccurrenceData[OccurrenceData$distance < dist,] # keep rows where distance is less than 'dist'
+    return(OccurrenceData)
+  }
 }
 
-# Filter if there are more than 10 unique locations
-row$inrange <- nrow(OccurrenceData)
-if(nrow(occurrence_data) > 10){
-  occurrence_data <- filter_n_closest_coordinate_ceiling(10, occurrence_data, samplelocation)
-}
+
 # Save the number of points for which the distance will be calculated
 row$pointscalculated <- nrow(occurrence_data)
 # find the shortest route to every point through the sea

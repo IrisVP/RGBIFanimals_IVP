@@ -185,20 +185,22 @@ filter_on_distance <- function(tr, samplelocation, unique_file){
                      fun = distVincentyEllipsoid))  
   ### 'fun =' which method is used = this method is for distances on earth (ellipsoid)
   # step2: Calculate the length through sea for the closest point
-  unique_file <- which.min(distances)
   ### make matrices out of longitudes and latitudes of samplelocation and unique_file
   sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
   uniquefile_matrix <- matrix(as.numeric(c(unique_file$Longitude, unique_file$Latitude)), ncol = 2)
   
-  sea_dist <-  geosphere::lengthLine(shortestPath(tr, sampleloc_matrix, #function sp_format!
+  sea_dist <-  geosphere::lengthLine(gdistance::shortestPath(tr, sampleloc_matrix, #function sp_format!
                                                   uniquefile_matrix, 
                                                   output = "SpatialLines"))
+  ### calculated sea_dist => shortest path between sampleloc and occurrence 
   # step3: filter out the datapoints further away than the sea_dist
-  filtered <- unique_file[distances <= sea_dist,]
+  filtered <- unique_file[distances <= sea_dist,]  ### retain distances that are equal to or smaller than sea_dist calculation
+  ### why do I get NA values here???: distances has 740 values and sea_dist only 74!
   if(nrow(filtered) > 0){
-    return(filtered)
+    return(filtered)   ### if filtered rows are more than 0 then return the dataframe
   } else {
-    unique_file[distances <= sea_dist + 16000,]
+    unique_file[distances <= sea_dist + 16000,] ### if there are 0 rows, save distances in unique_file
+    ### that are less or equal to sea_dist + 16000
   }
 }
 

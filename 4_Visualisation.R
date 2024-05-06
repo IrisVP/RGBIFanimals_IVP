@@ -1,12 +1,14 @@
 #Load necessary packages
-pacman::p_load(dplyr, tidyverse, phyloseq, rstatix, ggpubr, vegan, ggplot2)
+pacman::p_load(dplyr, tidyverse, phyloseqGraphTest, rstatix, ggpubr, vegan, ggplot2)
+
+### phyloseq doesn't exist anymore  => but phyloseqGraphTest does
 
 #Set wd to wherever all files are stored
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 #### Rarefaction curves ####
 #Plot rarefaction results
-Read_Count_Species_ARMS <- read.csv("Output/Read_Count_Species_ARMS.csv")
+Read_Count_Species_ARMS <- read.csv("Output/Read_Count_Species_ARMS_10.csv")
 OTU_Table_Rar <- Read_Count_Species_ARMS
 OTU_Table_Rar <- column_to_rownames(OTU_Table_Rar, "Specieslist")
 OTU_Table_Rar <- as.matrix(t(OTU_Table_Rar))
@@ -45,6 +47,7 @@ Only_Natives <- GBIF_Distance %>% filter(Alien_status == "NO") %>% select(Specie
 rm(GBIF_Distance)
 #Create factor to be able to assign read count and metadata to alien status
 Alien_Species_Obs <- paste0(Only_Aliens$Specieslist, "_", Only_Aliens$name)
+
 #Spread df
 Only_Aliens <- spread(data = Only_Aliens, key = name, value = value)
 #Prepare main dataframe with read counts to assign alien status
@@ -52,7 +55,8 @@ RC_Species_Obs_Year <- Read_Count_Species_ARMS %>% ungroup() %>% select(Speciesl
 RC_Species_Obs_Year <- RC_Species_Obs_Year %>% gather(key = "No_Fraction", value = "count", 2:ncol(RC_Species_Obs_Year))
 MetaData <- read.csv("Inputs/MetaData_Adjusted.csv")
 Meta_RC <- MetaData %>% select(-Fraction, -Filename)
-Meta_RC <- left_join(RC_Species_Obs_Year, Meta_RC, by = "No_Fraction")
+Meta_RC <- left_join(RC_Species_Obs_Year, Meta_RC, by = "No_Fraction", relationship = "many-to-many")
+### changed upper line to relationship = "many-to-many"
 Meta_RC$Species_Obs <- paste0(Meta_RC$Specieslist, "_", Meta_RC$Observatory.ID)
 #Filter main dataframe to one with only alien species
 Meta_RC_Alien <- Meta_RC %>% filter(Species_Obs %in% Alien_Species_Obs)
@@ -78,9 +82,10 @@ Meta_RC_Alien <- Meta_RC_Alien %>% select(-Species_Obs) %>% spread(Specieslist, 
 #Fill empty cells with 0
 Meta_RC[is.na(Meta_RC)] <- 0
 Meta_RC_Alien[is.na(Meta_RC_Alien)] <- 0
+########################################################################################## UNTIL HERE
 #Calculate Alien Read Fraction
-TotalReadCount <- rowSums(Meta_RC[, 15:ncol(Meta_RC)])
-AlienReadCount <- rowSums(Meta_RC_Alien[, 15:ncol(Meta_RC_Alien)])
+TotalReadCount <- rowSums(Meta_RC[, 19:ncol(Meta_RC)])
+AlienReadCount <- rowSums(Meta_RC_Alien[, 19:ncol(Meta_RC_Alien)])
 AlienReadFraction <- AlienReadCount/TotalReadCount
 Meta_RC$AlienReadFraction <- AlienReadFraction
 Meta_RC <- left_join(Meta_RC, AlienSpeciesFraction, by = "No_Fraction")
