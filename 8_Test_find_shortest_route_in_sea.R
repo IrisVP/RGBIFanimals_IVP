@@ -31,7 +31,8 @@ for (n in 1:nrow(long)){
     ### GET OCCURRENCE DATA ###
   res = occ_data(scientificName = long[n, 1],
                 hasCoordinate = TRUE, #Return only occurrence records with lat/long data (TRUE) or all records (FALSE, default).
-                limit = 500) # number of records to return, default = 500
+                limit = 500,) # number of records to return, default = 500
+              # default occurrenceStatus = present
   # Note that there is a hard maximum of 100,000, which is calculated as the limit+start, so start=99,000 and limit=2000 won't work
   print(paste("species name (from long) =", long[n, 1]))
     

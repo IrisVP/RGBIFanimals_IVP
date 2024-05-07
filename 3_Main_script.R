@@ -6,7 +6,7 @@ source("7_Functions_new.R")
 # Create a rastered world
 tr <- create_rastered_world("Inputs/new_tr.rdata")
 # Read a species list
-df <- read.csv("Output/Species_Location.csv")
+df <- read.csv("Output/Species_Location_half.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
 # Find the shortest path for each sampling location to the species observation (as the crow flies)
@@ -15,7 +15,9 @@ sapply(df$Specieslist, function(species){
   tryCatch(find_closest_registered_place(species, Coordinates, tr, "Output/ShortestPath.csv"), error = function(e)return())
 })
 
-long <- pivot_longer(df, !Specieslist)
+long <- pivot_longer(df, !Specieslist)  # from tidyr package, reshape df from wide to long format
+# all columns in df except Specieslist should be pivoted => will be treated as value columns
+# names will be stored in a new column called "name"
 long <- long[long$value > 0, ]
 
 

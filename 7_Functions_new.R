@@ -59,15 +59,15 @@ find_closest_registered_place <- function(species, Coordinates, tr, outputfile, 
              write.clean.csv(c(species, rep("", 15), "ERROR while getting the occurrence data"),
                              outputfile)
            })
-  obs <- nrow(res)
+  obs <- nrow(res_new)
   # Plot the distribution
   plotname <- paste0("plots/", species, ".jpeg")
   if(plot & !file.exists(plotname)){
-    plot_distribution(Coordinates, res, plotname, species)  ### line 72
+    plot_distribution(Coordinates, res_new, plotname, species)  ### line 72
   }
   # Remove duplicate coordinates
-  res <- res[!duplicated(res),]
-  uobs <- nrow(res)  # unique observations
+  res_new <- res_new[!duplicated(res_new),]
+  uobs <- nrow(res_new)  # unique observations
   # Calculate the distances between all the points and all the locations
   distances <- distm(res[, c("Longitude", "Latitude")], Coordinates[, c("Longitude", "Latitude")], 
                      fun = distVincentyEllipsoid)
@@ -106,15 +106,16 @@ check_occurrence_data <- function(species, filename = TRUE) {
 
 get_occurrence_data <- function(species){
   res = occ_data(scientificName = species, hasCoordinate = TRUE, limit = 100000) # limit changeable
-  res <- res$data[, c('decimalLongitude', 'decimalLatitude')]
+  # default occurrenceStatus = present
+  res_new <- res$data[, c('decimalLongitude', 'decimalLatitude')]
   #rename the column names
-  colnames(res) <- c('Longitude', 'Latitude')
+  colnames(res_new) <- c('Longitude', 'Latitude')
   # Remove occurrences where longitude or latitude is NA
-  res <- res[!is.na(res$Latitude) & !is.na(res$Longitude),]
-  return(res)
+  res_new <- res_new[!is.na(res_new$Latitude) & !is.na(res_new$Longitude),]
+  return(res_new)
 }
 
-plot_distribution <- function(Coordinates, res, plotname, title){
+plot_distribution <- function(Coordinates, res_new, plotname, title){
   ggplot() +
     geom_polygon(aes(x = long, y = lat, group = group), data = map_data("world")) +
     geom_hex(aes(x= Longitude, y = Latitude), data = res) +

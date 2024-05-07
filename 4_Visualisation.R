@@ -82,7 +82,7 @@ Meta_RC_Alien <- Meta_RC_Alien %>% select(-Species_Obs) %>% spread(Specieslist, 
 #Fill empty cells with 0
 Meta_RC[is.na(Meta_RC)] <- 0
 Meta_RC_Alien[is.na(Meta_RC_Alien)] <- 0
-########################################################################################## UNTIL HERE
+##################################################################### UNTIL HERE
 #Calculate Alien Read Fraction
 TotalReadCount <- rowSums(Meta_RC[, 19:ncol(Meta_RC)])
 AlienReadCount <- rowSums(Meta_RC_Alien[, 19:ncol(Meta_RC_Alien)])
