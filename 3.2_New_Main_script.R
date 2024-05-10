@@ -180,16 +180,20 @@ for (n in 1:nrow(df)){
   if(length == TRUE){   #### check if csv Occurrence data exists
     warning(paste(c(as.character(df[n, 1:2]), "has already been written"), collapse=" "))
   }
-  # Remove duplicates
-  file <- read.csv(filename, header = TRUE)
   
-  file_clean <- file[-which(file$Longitude < -180 | file$Longitude > 180 | file$Latitude < -90 | file$Latitude > 90), ]
+  # read file
+  file <- read.csv(filename, header = TRUE)
   ### cleaning latitudes and longitudes from file
-  tryCatch({unique_file <- file_clean[!duplicated(file_clean[, c("Longitude", "Latitude")]), ]}, # only retain unique longitudes + latitudes
-            error = function(errormessage){
-              write.table(paste(c(row, 0, 0, NA), collapse = ","), file = filename, 
-                          append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
-              })
+  file_clean <- filter(file, (file$Longitude >= -180 & file$Longitude <= 180) & (file$Latitude >= -90 & file$Latitude <= 90))
+  file_clean <- filter(file, is.numeric(Longitude) & is.numeric(Latitude))
+  file_clean <- file %>%
+    filter(!grepl("[A-Za-z]", Longitude) & !grepl("[A-Za-z]", Latitude) & !grepl("[A-Za-z]", X))
+  #file_clean$Longitude <- as.numeric(file_clean$Longitude)
+  #file_clean$Latitude <- as.numeric(file_clean$Latitude)
+  str(file_clean)
+  print(unique(file_clean$Longitude))
+  # Remove duplicates
+  unique_file <- file_clean[!duplicated(file_clean[, c("Longitude", "Latitude")]), ]
   
   # Remove samples taken further away than the closest point
             ### FILTER ON DISTANCE ###
@@ -209,9 +213,10 @@ for (n in 1:nrow(df)){
   ### calculated sea_dist => shortest path between sampleloc and occurrence 
   # step3: filter out the datapoints further away than the sea_dist
   filtered <- unique_file[distances <= sea_dist,]  ### retain distances that are equal to or smaller than sea_dist calculation
-  cleaned_filtered <- na.omit(filtered)
   ### why do I get NA values here???: distances has 740 values and sea_dist only 74!
   ### removing NA values
+  cleaned_filtered <- na.omit(filtered)
+  
   if(nrow(cleaned_filtered) > 0){
     OccurrenceData <- cleaned_filtered  ### if filtered rows are more than 0, then make OccurrenceData var
   } else {
@@ -223,16 +228,18 @@ for (n in 1:nrow(df)){
   df$inrange <- nrow(OccurrenceData)
                 ### FILTER N CLOSEST COORDINATE CEILING ###
   if(nrow(OccurrenceData) > 10){
-    ###OccurrenceData <- filter_n_closest_coordinate_ceiling(10, OccurrenceData, samplelocation)
-    if(OccurrenceData$Longitude > samplelocation$Longitude & OccurrenceData$Latitude > samplelocation$Latitude){
-      print(paste("Occ_data_long - Sample_long", OccurrenceData$Longitude, "-", samplelocation$Longitude))
-      print(paste("Occ_data_lat - sample_lat", OccurrenceData$Latitude, "-", samplelocation$Latitude))
-      OccurrenceData$distance <- pmax(abs(OccurrenceData$Longitude - samplelocation$Longitude), 
-                                      abs(OccurrenceData$Latitude - samplelocation$Latitude))
-      # pmax is used to get element-wise maximum, abs() to get absolute differences
-      dist = ceiling(sort(OccurrenceData$distance)[n]) #sorted ascending and select highest distance and round up
-      OccurrenceData <- OccurrenceData[OccurrenceData$distance < dist,] # keep rows where distance is less than 'dist'
-      ############# DON'T GET THESE LINES #################
+    
+    if(OccurrenceData$Longitude > samplelocation$Longitude){
+      if (OccurrenceData$Latitude > samplelocation$Latitude){
+        #print(paste("Occ_data_long - Sample_long", OccurrenceData$Longitude, "-", samplelocation$Longitude))
+        #print(paste("Occ_data_lat - sample_lat", OccurrenceData$Latitude, "-", samplelocation$Latitude))
+        OccurrenceData$distance <- pmax(abs(OccurrenceData$Longitude - samplelocation$Longitude), 
+                                        abs(OccurrenceData$Latitude - samplelocation$Latitude))
+        # pmax is used to get element-wise maximum, abs() to get absolute differences
+        dist = ceiling(sort(OccurrenceData$distance)[n]) #sorted ascending and select highest distance and round up
+        OccurrenceData <- OccurrenceData[OccurrenceData$distance < dist,] # keep rows where distance is less than 'dist'
+        ############# DON'T GET THESE LINES #################
+      }
     }
   }
   
