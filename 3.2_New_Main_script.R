@@ -150,28 +150,30 @@ long <- pivot_longer(df, !Specieslist)# from tidyr package, reshape df from wide
 long <- long[long$value > 0, ]
 
 ############################################################################################
-# MAKE SAMPLELOCATION FILE WITH LATITUDE AND LONGITUDE
-############################################################################################
-
-# make a file called samplelocation with only longitude and latitude for each species
-samplelocation <- data.frame(Longitude = numeric(0), Latitude = numeric(0))
-for (r in 1:nrow(Coordinates)) {
-  # Find the coordinates for the current Observatory ID => extract Longitude and Latitude
-  current_coordinates <- Coordinates[r,2-3]
-  # print(current_coordinates)   = if necessary
-  # Append the coordinates to the 'samplelocation' dataframe
-  samplelocation <- rbind(samplelocation, current_coordinates)
-}  
-
-############################################################################################
 # FIND SHORTEST ROUTE IN SEA
 ############################################################################################
 
-  ### CHECK OCCURRENCE DATA AND SAVE IT ###
-  ### OccurrenceData <- check_occurrence_data(row[1]) ###
-  # Iterate over each unique species name
-  unique_species <- unique(long[,1])
-  for (species_name in unique_species$Specieslist){
+### CHECK OCCURRENCE DATA AND SAVE IT ###
+### OccurrenceData <- check_occurrence_data(row[1]) ###
+for (species_name in long$Specieslist){   # Iterates one time over first organism and 
+  # then goes to the next for loop and iterates over every location while still only using one
+  # kind of species!!
+  # look at last suggestion from chatgpt!
+  
+  # First iterate over the locations in long dataframe and make the samplelocation file
+  for (location_name in long$name){
+    print(paste0("Location_name for first species in df long= ", location_name))
+    # use grep to get the row from the Coordinates df where location_name is present
+    location_row_index <- grep(location_name, Coordinates$Observatory.ID)
+    # save longitude and latitude for the row that you selected with grep
+    longitude <- Coordinates[location_row_index, "Longitude"]
+    latitude <- Coordinates[location_row_index, "Latitude"]
+    # make a dataframe out of the longitude and latitude and print as a check
+    samplelocation <- data.frame(Longitude = longitude, Latitude = latitude)
+    print(paste0("Location => samplelocation$Longitude= ", samplelocation$Longitude))
+    print(paste0("Location => samplelocation$Latitude= ", samplelocation$Latitude))
+    #####################################################################################
+    
     filename <- paste0("OccurrenceData/", species_name, ".csv")
     if (file.exists(filename) == TRUE) {
       print(filename)
@@ -189,7 +191,8 @@ for (r in 1:nrow(Coordinates)) {
       
     }
     OccurrenceData <- res
-    print(paste0("OccurrenceData ====", OccurrenceData))     # gets printed
+    #print(paste0("OccurrenceData ====", OccurrenceData))
+    
     ### FIND SHORTEST ROUTE IN SEA ###
     filename <- "Output/DistanceOverSea.csv"
     if(!file.exists(filename)){
@@ -197,16 +200,16 @@ for (r in 1:nrow(Coordinates)) {
                   file = filename, append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
     }
     ### CHECK IN FILE ###
-    ### checks if combination of column 1 and 2 in row n in df is already present, if so, there is a warning
+    ### checks if combination of column 1 and 2 in rows in long is already present, if so, there is a warning
     contents <- readChar(filename, file.info(filename)$size)
-    length <- length(grep(paste(long[n, 1:2], collapse = ","), contents))>0
+    length <- length(grep(paste(long[, 1:2], collapse = ","), contents))>0
     if(length == TRUE){   #### check if csv Occurrence data exists
-      warning(paste(c(as.character(long[n, 1:2]), "has already been written"), collapse=" "))
+      warning(paste(c(as.character(long[, 1:2]), "has already been written"), collapse=" "))
     }
     
     # Remove duplicates  ==> from original function
     unique_file <- OccurrenceData[!duplicated(OccurrenceData[, c("Longitude", "Latitude")]), ]
-    print(paste0("unique_file ====", unique_file))
+    #print(paste0("unique_file ====", unique_file))
     # Remove samples taken further away than the closest point
     ### FILTER ON DISTANCE ###
     # step1: calculate all distances to samplelocation
@@ -222,7 +225,7 @@ for (r in 1:nrow(Coordinates)) {
     sea_dist <-  geosphere::lengthLine(gdistance::shortestPath(tr, sampleloc_matrix, #function sp_format!
                                                                uniquefile_matrix, 
                                                                output = "SpatialLines"))
-    print(paste0("sea_dist ====", sea_dist))
+    #print(paste0("sea_dist ====", sea_dist))
     ### calculated sea_dist => shortest path between sampleloc and occurrence 
     # step3: filter out the datapoints further away than the sea_dist
     filtered <- unique_file[distances <= sea_dist,]  ### retain distances that are equal to or smaller than sea_dist calculation
@@ -239,16 +242,18 @@ for (r in 1:nrow(Coordinates)) {
     
     # Filter if there are more than 10 unique locations
     df$inrange <- nrow(OccurrenceData_new)
-    print(paste0("OccurrenceData_new ====", OccurrenceData_new))
+    #print(paste0("OccurrenceData_new ====", OccurrenceData_new))
     ###########################################################################################
     ### FILTER N CLOSEST COORDINATE CEILING ###
     if(nrow(OccurrenceData_new) > 10){
       print("start calculating distances...")
       OccurrenceData_new$distance <- pmax(abs(OccurrenceData_new$Longitude - samplelocation$Longitude), 
                                           abs(OccurrenceData_new$Latitude - samplelocation$Latitude))
-      print("OccurrenceData_new$Longitude - samplelocation$Longitude")
       # pmax is used to get element-wise maximum, abs() to get absolute differences
-      dist = ceiling(sort(OccurrenceData_new$distance)[n]) #sorted ascending and select highest distance and round up
+      # Calculate the index of the nth sorted distance
+      sorted_distances <- sort(OccurrenceData_new$distance)
+      n <- length(sorted_distances)  # Replace 'n' with the desired index
+      dist <- ceiling(sorted_distances[n])
       print(paste0("dist ====", dist))
       OccurrenceData_new2 <- OccurrenceData_new[OccurrenceData_new$distance < dist,] # keep rows where distance is less than 'dist'
       #########################################################################################
@@ -269,9 +274,10 @@ for (r in 1:nrow(Coordinates)) {
     # Find the closest location the point of sampling
     df$distance <- min(as.numeric(sapply(paths, function(x) geosphere::lengthLine(x))), na.rm=T)
     write.table(paste(df,collapse = ","), file = filename, append = TRUE, quote = FALSE, 
-                col.names = FALSE, row.names = FALSE)
+                col.names = FALSE, row.names = FALSE)   # file = DistanceOverSea.csv
   }
-
+}
+  
 
 #### Clean R environment ####
 rm(list = ls())
@@ -280,4 +286,3 @@ rm(list = ls())
 results <- read.csv("Output/DistanceOverSea.csv")
 results <- results[!is.na(results$distance),]
 write.csv(results, "Output/DistanceOverSea.csv", quote = F, row.names = F)
-
