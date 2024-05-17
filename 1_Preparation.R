@@ -22,7 +22,7 @@ LOI <- c("Toralla", "Getxo", "Vigo", "Roscoff", "Plymouth", "Galway", "BelgianCo
          "Helsingborg", "Hjuvik", "Koster", "Laesoe1", "Laesoe2", "Laesoe3", "Limfjord", "Marstrand", "Preemraff",
          "Varberg", "Gdynia", "TZS")
 Locations_BOLD <- Locations_BOLD %>% # %>% = pipe operator, joins filter function in next line
-  filter(V1 %in% LOI)  # %in% checks if LOI is present in column V1 (for filtering of df)
+  filter(V1 %in% LOI)  # %in% checks if locations in V1 are present in LOI (for filtering of df)
 #Paste colnames back together for later filtering steps
 Locations_BOLD$V3 <- paste0(Locations_BOLD$V1, ".", Locations_BOLD$V2)
 
@@ -43,7 +43,7 @@ MetaData[MetaData == ""] <- NA # Replace blank by NA
 
 MetaData <- na.omit(MetaData)  # remove missing values
 MetaData <- MetaData[complete.cases(MetaData), ]  # remove rows with missing values
-MetaData$Year <- format(as.Date(MetaData$Deployment_date), "%Y")
+MetaData$Year <- format(as.Date(MetaData$Deployment_date), "%Y") # add column Year with only years
 ### adding extra column with combination of Observatory.ID and year
 MetaData$Location_Year <- paste0(MetaData$Observatory.ID, "_", MetaData$Year) 
 #Add column in which ARMS fraction is removed
@@ -51,8 +51,6 @@ MetaData$No_Fraction <- MetaData$Filename
 MetaData$No_Fraction <- sub("\\.MF.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.MT.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.SF40", "", MetaData$No_Fraction)
-######################################################################
-
 ######################################################################
 #Determine taxonomy order
 Taxonomy <- c("Phylum", "Class", "Order", "Family", "Genus", "Species")
@@ -107,12 +105,12 @@ df <- Data_LOI
 colnames(df) <- c("sequence", Taxonomy, "Specieslist", "Similarity", MetaData$No_Fraction)
 Column_Order <- unique(colnames(df))
 
-##################################################################################
 #Merge columns with duplicate names and sum contents
-df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
-Read_Count_ASVs_ARMS <- cbind(df2, df[,!duplicated(colnames(df)) & !duplicated(colnames(df), fromLast = TRUE)])
+df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]),
+              function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
+Read_Count_ASVs_ARMS <- cbind(df2, df[,!duplicated(colnames(df)) &
+                                        !duplicated(colnames(df), fromLast = TRUE)])
 rm(df, df2)
-####################################################################################
 
 #Read count per Species, per ARMS, per year
 Read_Count_Species_ARMS <- Read_Count_ASVs_ARMS %>%
@@ -129,7 +127,8 @@ RC_Species_Loc_Year <- Data_LOI[, c(Taxonomy[1:4], "Specieslist", MetaData$Filen
 colnames(RC_Species_Loc_Year) <- c(Taxonomy[1:4], "Specieslist", MetaData$Location_Year)
 df <- RC_Species_Loc_Year
 #Merge columns with duplicate names and sum contents 
-df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
+df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), 
+              function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
 RC_Species_Loc_Year <- as.data.frame(cbind(df2, df[,!duplicated(colnames(df)) & !duplicated(colnames(df), fromLast = TRUE)]))
 rm(df, df2)
 #group by Specieslist and sum read counts locations
@@ -166,10 +165,11 @@ write.csv(Data_LOI, "Data_LOI.csv", row.names = FALSE)
 Species_Location <- Read_Count_Species_Fraction
 ### THIS IS THE SAME AS Read_Count_Species_Fraction => removed duplicate code
 
-colnames(Species_Location) <- c("Specieslist", MetaData$Observatory.ID) #make df Specices_Location with Specieslist and Observatory.ID
+colnames(Species_Location) <- c("Specieslist", MetaData$Observatory.ID) #make df Species_Location with Specieslist and Observatory.ID
 df <- Species_Location
 #Merge columns with duplicate names and sum contents
-df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
+df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), 
+              function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
 Species_Location <- as.data.frame(cbind(df2, df[,!duplicated(colnames(df)) & !duplicated(colnames(df), fromLast = TRUE)]))
 Species_Location <- Species_Location %>% dplyr::select(Specieslist, everything())
 rm(df, df2)

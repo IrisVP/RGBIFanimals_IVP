@@ -85,7 +85,7 @@ Meta_RC_Alien[is.na(Meta_RC_Alien)] <- 0
 ##################################################################### UNTIL HERE
 #Calculate Alien Read Fraction
 TotalReadCount <- rowSums(Meta_RC[, 19:ncol(Meta_RC)])
-AlienReadCount <- rowSums(Meta_RC_Alien[, 19:ncol(Meta_RC_Alien)])
+AlienReadCount <- rowSums(Meta_RC_Alien[, 19:ncol(Meta_RC_Alien)])  ### ERROR
 AlienReadFraction <- AlienReadCount/TotalReadCount
 Meta_RC$AlienReadFraction <- AlienReadFraction
 Meta_RC <- left_join(Meta_RC, AlienSpeciesFraction, by = "No_Fraction")

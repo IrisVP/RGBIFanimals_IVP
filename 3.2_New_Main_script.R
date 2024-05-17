@@ -18,7 +18,7 @@ library("FRK")
 # Set working directory to directory where the R-script is saved
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # requires installation of package "rstudioapi"
 # Read a species list
-df <- read.csv("Output/Test_error_Species_Location.csv")
+df <- read.csv("Output/RealFirst10_Species_Location.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
 
@@ -161,6 +161,7 @@ long <- long[long$value > 0, ]
 Map(function(species_name, location_name) {
   # Subset "long" dataframe for the current species and location
   species_data <- long %>% filter(Specieslist == species_name & name == location_name)
+  print(species_data)
   # print location name as a check
   print(paste0("Location_name for species in df long= ", location_name))
   # use grep to get the row from the Coordinates df where location_name is present
@@ -203,9 +204,9 @@ Map(function(species_name, location_name) {
   # Is the main function in this part: withholds the next few steps until the end of the loop
   ###########################################################################################
   
-  filename <- "Output/DistanceOverSea.csv"
+  filename <- "Output/DistanceOverSea_errorsolving.csv"
   if(!file.exists(filename)){
-    write.table(paste(c(names(colnames(long)), "inrange", "pointscalculated","distance"),collapse = ","), 
+    write.table(paste(c(colnames(long), "inrange", "pointscalculated","distance"),collapse = ","), 
                 file = filename, append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
   }
   ##############################################
@@ -230,14 +231,32 @@ Map(function(species_name, location_name) {
   distances <- as.numeric(distm(samplelocation[,c("Longitude", "Latitude")], 
                                 unique_file[,c("Longitude", "Latitude")], 
                                 fun = distVincentyEllipsoid))
-  print(paste0("distances have been calculated for", species_name, "and", location_name, "in line 220"))
+  print(paste0("distances have been calculated for ", species_name, " and ", location_name, " in line 220"))
   # 'fun =' which method is used = this method is for distances on earth (ellipsoid)
+  
+  ############################################################## CHECK
+  if (any(is.na(samplelocation$Longitude)) || any(is.na(samplelocation$Latitude))) {
+    stop("NA values found in samplelocation coordinates")
+  }
+  if (any(is.na(unique_file$Longitude)) || any(is.na(unique_file$Latitude))) {
+    stop("NA values found in unique_file coordinates")
+  }
+  
+  ##############################################################
   
   ### step2 ### Calculate the length through sea for the closest point
   ### make matrices out of longitudes and latitudes of samplelocation and unique_file
   sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
   uniquefile_matrix <- matrix(as.numeric(c(unique_file$Longitude, unique_file$Latitude)), ncol = 2)
-  
+  ###############################################!!!!!!!!!!!!!!  CHECKS
+  #print("sampleloc_matrix content:")
+  #print(sampleloc_matrix)
+  #print("uniquefile_matrix content:")
+  #print(uniquefile_matrix)
+  if (nrow(sampleloc_matrix) != 1 || nrow(uniquefile_matrix) == 0) {
+    stop("Incorrect dimensions of the matrices")
+  }
+  ################################################!!!!!!!!!!!!!!!
   sea_dist <-  geosphere::lengthLine(gdistance::shortestPath(tr, sampleloc_matrix, #function sp_format!
                                                              uniquefile_matrix, 
                                                              output = "SpatialLines"))
@@ -260,14 +279,13 @@ Map(function(species_name, location_name) {
   }
   print("cleaned_filtered file has been made")
   
-  # make new long dataframe and only put in the specific species with only 1 location
-  new_long <- filter(long, name == location_name)
-  # Filter if there are more than 10 unique locations
-  new_long$inrange <- nrow(OccurrenceData_new)
-  print(paste0("nrow(OccurrenceData_new) == ", new_long$inrange))
+  # save the number of rows in 'inrange'
+  species_data$inrange <- nrow(OccurrenceData_new)
+  print(paste0("nrow(OccurrenceData_new) == ", species_data$inrange))
   
   #########################################################
   ### FILTER N CLOSEST COORDINATE CEILING ###
+  # Filter if there are more than 10 unique locations
   #########################################################
   if(nrow(OccurrenceData_new) > 10){
     print("start calculating distances...")
@@ -286,7 +304,7 @@ Map(function(species_name, location_name) {
   ##########################################################
   
   # Save the number of points for which the distance will be calculated
-  new_long$pointscalculated <- nrow(OccurrenceData_new)
+  species_data$pointscalculated <- nrow(OccurrenceData_new)
   # find the shortest route to every point through the sea
   paths <- sapply(1:nrow(OccurrenceData_new), function(i) {
     sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
@@ -298,12 +316,100 @@ Map(function(species_name, location_name) {
     return(path)
   })
   print("Shortest routes through sea for every point have been calculated")
-  # Find the closest location the point of sampling
-  new_long$distance <- min(as.numeric(sapply(paths, function(x) geosphere::lengthLine(x))), na.rm=T)
-  return(new_long)
-  write.table(paste(new_long,collapse = ","), file = filename, append = TRUE, quote = FALSE, 
+  # Find the closest location to the point of sampling
+  species_data$distance <- min(as.numeric(sapply(paths, function(x) geosphere::lengthLine(x))), na.rm=T)
+  #return(long)
+  write.table(paste(species_data,collapse = ","), file = filename, append = TRUE, quote = FALSE, 
               col.names = FALSE, row.names = FALSE)   # file = DistanceOverSea.csv
-}, new_long$Specieslist, new_long$name)
+  
+  print("<3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3
+        To the next loop with the next species/location <3
+        <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3") 
+}, long$Specieslist, long$name)
+
+########################################################## TESTING ############
+# Assuming `tr` is correctly defined and loaded
+
+# Test matrices
+test_sampleloc <- matrix(c(-4.159167, 50.350134), ncol = 2)
+test_uniquefile <- matrix(c(-4.159167, 50.350134, -4.161, 50.351), ncol = 2, byrow = TRUE)
+
+# Print the transition layer
+print("Transition layer tr:")
+print(tr)
+print(class(tr))
+
+# Print matrices to debug their content
+print("Test sampleloc_matrix content:")
+print(test_sampleloc)
+print("Test uniquefile_matrix content:")
+print(test_uniquefile)
+
+# Attempt shortestPath with error handling
+spatial_lines <- tryCatch({
+  gdistance::shortestPath(tr, test_sampleloc, test_uniquefile, output = "SpatialLines")
+}, error = function(e) {
+  print(paste("Error in shortestPath:", e$message))
+  NULL
+})
+
+# Check if spatial_lines is successfully created
+if (is.null(spatial_lines)) {
+  stop("shortestPath failed, check transition layer and input matrices.")
+}
+
+# Print the spatial_lines object to inspect its structure
+print("spatial_lines object:")
+print(spatial_lines)
+print(class(spatial_lines))
+
+# Set a valid CRS for the spatial_lines object
+crs_string <- "+proj=longlat +datum=WGS84 +no_defs"
+proj4string(spatial_lines) <- CRS(crs_string)
+
+# Inspect the detailed structure of spatial_lines
+print("Detailed structure of spatial_lines:")
+str(spatial_lines)
+
+# Extracting coordinates from the SpatialLines object
+coords_list <- lapply(spatial_lines@lines, function(line) line@Lines[[1]]@coords)
+
+# Calculating sea distance
+sea_distances <- sapply(coords_list, function(coords) {
+  geosphere::distVincentyEllipsoid(coords)
+})
+
+# Summing up sea distances
+total_sea_distance <- sum(sea_distances)
+
+# Printing the total sea distance
+print("Total sea distance:")
+print(total_sea_distance)
+
+
+
+# Verify the content of spatial_lines before passing it to lengthLine
+if (is(spatial_lines, "SpatialLines")) {
+  # Calculate sea distance
+  test_sea_dist <- tryCatch({
+    geosphere::lengthLine(spatial_lines)
+  }, error = function(e) {
+    print(paste("Error in lengthLine:", e$message))
+    NULL
+  })
+  
+  if (is.null(test_sea_dist)) {
+    stop("lengthLine failed, check spatial_lines object.")
+  }
+  
+  print("Test sea distance:")
+  print(test_sea_dist)
+} else {
+  stop("spatial_lines is not a SpatialLines object, check shortestPath output.")
+}
+
+########################################################################## TEST UNTIL HERE
+
 
 ##########################################
 #### Clean R environment ####
@@ -311,6 +417,6 @@ Map(function(species_name, location_name) {
 rm(list = ls())
 
 #### Additional, optional, cleaning step ####
-results <- read.csv("Output/DistanceOverSea.csv")
+results <- read.csv("Output/DistanceOverSea_errorsolvingalData.csv")
 results <- results[!is.na(results$distance),]
-write.csv(results, "Output/DistanceOverSea.csv", quote = F, row.names = F)
+write.csv(results, "Output/DistanceOverSea_errorsolvingalData.csv", quote = F, row.names = F)

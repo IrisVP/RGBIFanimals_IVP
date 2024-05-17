@@ -1,23 +1,13 @@
 Specieslist,name,value,inrange,pointscalculated,distance
-Acartia bifilosa,BelgianCoast,1,50,50,76779.3317116989
-Acartia bifilosa,Roscoff,6,1,1,307397.838300574
-Acartia clausi,Getxo,2,8,8,16664.9337666591
-Aleochara obscurella,BelgianCoast, 2,0,0,NA
-Alitta saltoni,Getxo, 3,0,0,NA
-Alitta succinea,Koster, 4,0,0,NA
-Alitta virens,Laeso, 5,0,0,NA
-Alvania punctura,Limfjord, 6,0,0,NA
-Amathia gracilis,Plymouth, 7,0,0,NA
-Amathia imbricata,Roscoff, 8,0,0,NA
-Amblyosyllis madeirensis,SwedishWestCoast, 9,0,0,NA
-Amphiascopsis cinctus,TZS,10,0,0,NA
-Amphibalanus amphitrite,Vigo,11,0,0,NA
-Acartia clausi,SwedishWestCoast, 9,0,0,NA
-Acartia hudsonica,Koster, 3,0,0,NA
-Acartia longiremis,Laeso, 4,0,0,NA
-Acartia margalefi,Limfjord, 5,0,0,NA
-Acartia tonsa,Plymouth, 6,0,0,NA
-Acrocnida brachiata,Roscoff, 7,0,0,NA
-Aeolidia papillosa,SwedishWestCoast, 8,0,0,NA
-Aetea truncata,TZS, 9,0,0,NA
-Alcyonium digitatum,Vigo,10,0,0,NA
+Acartia bifilosa,BelgianCoast,1,117,117,781472.49130368
+Acartia bifilosa,Roscoff,6,117,117,26651606.858128
+Acartia clausi,Getxo,2,26,26,19196493.453547
+Acartia clausi,SwedishWestCoast,9,26,26,16707.5700592006
+Acartia hudsonica,Koster,3,130,130,88720.1689183574
+Acartia longiremis,Laeso,4,166,166,134545.514090896
+Acartia margalefi,Limfjord,5,3,3,26039491.6173959
+Acartia tonsa,Plymouth,6,183,183,1290321.87114122
+Acrocnida brachiata,Roscoff,7,440,440,22093.9919904834
+Aeolidia papillosa,SwedishWestCoast,8,729,729,16707.5700592006
+Aetea truncata,TZS,9,162,162,996257.694213507
+Alcyonium digitatum,Vigo,10,722,722,199784.382772906

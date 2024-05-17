@@ -1,0 +1,103 @@
+---
+title: "3.2_New_Main_script_documentation"
+author: "Iris Van Paemel"
+date: "2024-05-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 3.2_New_Main_script.R script
+
+### Input
+
+
+
+### Output
+
+
+
+### script + descriptions
+
+First, the used packages are loaded and the necessary data
+The working directory is set to the path in which the active script is located.
+
+LOADING LIBRARIES
+
+```{r New_Main_script load libraries}
+############################################################################################
+# LOAD PACKAGES
+############################################################################################
+library("gdistance")
+library("dplyr")
+require("geosphere")
+require("rgbif")
+library("ggplot2")
+library("tidyr")
+library("worrms")
+library("sf")
+library("maps")
+library("FRK")
+
+############################################################################################
+# LOAD DATA
+############################################################################################
+# Set working directory to directory where the R-script is saved
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # requires installation of package "rstudioapi"
+# Read a species list
+df <- read.csv("Output/RealFirst10_Species_Location.csv") # filename can be changed
+# Read coordinates file
+Coordinates <- read.csv("Inputs/Coordinates.csv")
+
+```
+
+CREATE A RASTERED WORLD (line 27 in 3.2_New_Main_script.R script))
+
+- Firstly, it checks if the new_tr.rdata file already exists, if not, it will make one
+- A map is loaded with the map_data function from ggplot2
+- converting a dataframe to a SpatialPolygons object with the df_to_SpatialPolygons function
+- saving the crs in world_crs variable
+- The spTransform function is used to map projection and datum transformation
+- A raster is made in the ras variable
+
+```{r New_Main_script Create a rastered world}
+
+############################################################################################
+# CREATE A RASTERED WORLD
+############################################################################################
+
+# if the file is already made, it will load the file and return it
+if(file.exists("Inputs/new_tr.rdata")){
+  load("Inputs/new_tr.rdata")
+} else{
+  # Load a map
+  wrld_simpl2 <- map_data("world") # comes from ggplot2
+  wrld_simpl <- df_to_SpatialPolygons(df = wrld_simpl2,
+                                      keys = "region",
+                                      coords = c("long", "lat"),
+                                      proj = CRS("+proj=longlat +ellps=sphere"))
+  # Generate a scaffold for the raster file
+  world_crs <- crs(wrld_simpl)
+  worldshp <- spTransform(wrld_simpl, world_crs)
+  ras <- raster(nrow=1200, ncol=1200)
+  
+  # Generate a raster file
+  worldmask <- rasterize(worldshp, ras)
+  worldras <- is.na(worldmask) # inverse water and land, so ocean becomes 1 and land 0
+  worldras[worldras==0] <- 999 # set land to 999
+
+  # Create a Transition object from the raster
+  tr <- transition(worldras, function(x) 1/mean(x), 16)
+  tr = geoCorrection(tr, scl=FALSE)
+}
+```
+
+
+
+
+
+
+
+
