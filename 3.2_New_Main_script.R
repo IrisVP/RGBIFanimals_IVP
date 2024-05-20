@@ -156,12 +156,15 @@ long <- long[long$value > 0, ]
 #############################################
 ### CHECK OCCURRENCE DATA AND SAVE IT ###
 #############################################
-
+error_messages <- list()
   # Iterate over the locations and species names in long dataframe
-Map(function(species_name, location_name) {
+ls() <- function(species_name, location_name) {
   # Subset "long" dataframe for the current species and location
   species_data <- long %>% filter(Specieslist == species_name & name == location_name)
   print(species_data)
+  species_name <- "Aetea truncata"
+  location_name <- "Getxo"
+  #species_data <- c("Aetea truncata" = species_name & "Koster" = location_name)
   # print location name as a check
   print(paste0("Location_name for species in df long= ", location_name))
   # use grep to get the row from the Coordinates df where location_name is present
@@ -204,7 +207,7 @@ Map(function(species_name, location_name) {
   # Is the main function in this part: withholds the next few steps until the end of the loop
   ###########################################################################################
   
-  filename <- "Output/DistanceOverSea_errorsolving.csv"
+  filename <- "Output/DistanceOverSea.csv"
   if(!file.exists(filename)){
     write.table(paste(c(colnames(long), "inrange", "pointscalculated","distance"),collapse = ","), 
                 file = filename, append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
@@ -248,24 +251,144 @@ Map(function(species_name, location_name) {
   ### make matrices out of longitudes and latitudes of samplelocation and unique_file
   sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
   uniquefile_matrix <- matrix(as.numeric(c(unique_file$Longitude, unique_file$Latitude)), ncol = 2)
-  ###############################################!!!!!!!!!!!!!!  CHECKS
-  #print("sampleloc_matrix content:")
-  #print(sampleloc_matrix)
-  #print("uniquefile_matrix content:")
-  #print(uniquefile_matrix)
+  ###############################################!!!!!!!!!!!!!!  CHECK
   if (nrow(sampleloc_matrix) != 1 || nrow(uniquefile_matrix) == 0) {
     stop("Incorrect dimensions of the matrices")
   }
-  ################################################!!!!!!!!!!!!!!!
-  sea_dist <-  geosphere::lengthLine(gdistance::shortestPath(tr, sampleloc_matrix, #function sp_format!
-                                                             uniquefile_matrix, 
-                                                             output = "SpatialLines"))
-  print(paste0("sea distances have been calculated for ", species_name, " and ", location_name, " in line 230"))
+  # sea_dist calculation and error catching
+  sea_dist <- NA
+  result <- tryCatch({
+    
+    ###################################################################################### SEA_DIST
+    #sea_dist <- geosphere::lengthLine(gdistance::shortestPath(tr, sampleloc_matrix, uniquefile_matrix, output = "SpatialLines"))
+    
+    #### NEW
+    ### SHORTESTPATH
+    
+    #function(x, origin, goal, output)
+    x <- tr
+    origin <- sampleloc_matrix
+    goal <- uniquefile_matrix
+    output <- "SpatialLines"
+      
+    originCells <- raster::cellFromXY(x, origin)
+    goalCells <- raster::cellFromXY(x, goal)
+    indexOrigin <- originCells
+    indexGoal <- goalCells
+    y <- transitionMatrix(x)
+    if(isSymmetric(y)) {
+      mode <- "undirected"
+    }else{
+      mode <- "directed"
+    }
+      
+    adjacencyGraph <- igraph::graph_from_adjacency_matrix(y, mode=mode, weighted=TRUE)
+    E(adjacencyGraph)$weight <- 1/E(adjacencyGraph)$weight
+    
+    shortestPaths <- shortest_paths(adjacencyGraph,
+                                        indexOrigin, indexGoal)$vpath
+    print(shortestPaths)
+    if(output=="SpatialLines")
+    {
+      linesList <- vector(mode="list", length=length(shortestPaths))
+      
+      for(i in 1:length(shortestPaths))
+      {
+        sPVector <- shortestPaths[[i]]
+        coords <- raster::xyFromCell(x, sPVector)
+        linesList[[i]] <- Line(coords)
+      }
+        
+      # Suggested by Sergei Petrov
+      LinesObject <- mapply(Lines,
+                            slinelist = linesList,
+                            ID = as.character(1:length(shortestPaths)),
+                            SIMPLIFY = FALSE)
+        
+      result <- sp::SpatialLines(LinesObject, proj4string = sp::CRS(projection(x)))
+    }
+    print(result)
+    
+    ### LENGTHLINE
+    # function(line)
+    line <- result
+    
+    if (inherits(line, 'SpatialPolygons')) {
+      requireNamespace('raster')
+      line <- raster::geom(methods::as(line, 'SpatialLines'))
+    } else if (inherits(line, 'SpatialLines')) {
+      requireNamespace('raster')
+      line <- raster::geom(line)
+    } else {
+      line <- cbind(object=1, part=1, cump=1, line[, 1:2])
+      colnames(line)[4:5] <- c('x', 'y')
+    }
+    
+    # Debug: Check structure of line after conversion
+    print(head(line))
+    
+    ids <- unique(line[,1])
+    
+    len <- rep(0, length(ids))
+    
+    # Debug: Check unique IDs and their count
+    print(ids)
+    print(length(ids))
+    
+    for (i in 1:length(ids)) {
+      d <- line[line[,1] == ids[i], ]
+      print(paste0("dim(d)", dim(d)))
+      
+      parts <- unique(d[,2])
+      print(parts)
+      for (p in parts) {
+        dd <- d[d[,2] == p, ,drop=FALSE]
+        
+        print(paste0("dim(dd))", dim(dd)))
+        
+        if(nrow(dd) < 2) {
+          warning("Not enough points to calculate distance for part ", p, " of object ", ids[i])
+          next
+        }
+        
+        for (j in 1:(nrow(dd)-1)) {
+          len[i] <- len[i] + distGeo(dd[j, c('x', 'y'), drop=FALSE], dd[j+1, c('x', 'y'), drop=FALSE])
+        }
+      }
+    }
+    sea_dist <- len
+    print(sea_dist)
+    #### NEW
+    
+    # Continue processing if no error
+    print(paste0("sea distances have been calculated for ", species_name, " and ", location_name, " in line 230"))
+    
+    
+    
+    #########################################################################################
+    #return(sea_dist)
+  }, error = function(e) {
+    error_message <- paste0("An error occurred during calculation of sea_dist on line 257 for ", species_name, " in ", location_name)
+    cat(error_message, "\n")
+    
+    # Collect the error message
+    error_messages <<- append(error_messages, list(error_message))
+    
+    # Return FALSE to indicate that this iteration should be skipped
+    return(FALSE)
+  })
+  
+  # Check if sea_dist was calculated successfully
+  if (length(sea_dist) == 1 && is.na(sea_dist)){
+    return(FALSE) # skip current iteration
+  }
+  
   ### calculated sea_dist => shortest path between sampleloc and occurrence 
   
   ### step3 ### filter out the datapoints further away than the sea_dist
   filtered <- unique_file[distances <= sea_dist,]
   print("distances further than sea_dist have been filtered out")
+  #print(filtered)
   ### retain distances that are equal to or smaller than sea_dist calculation
   ### why do I get NA values here?
   ### removing NA values
@@ -321,102 +444,28 @@ Map(function(species_name, location_name) {
   #return(long)
   write.table(paste(species_data,collapse = ","), file = filename, append = TRUE, quote = FALSE, 
               col.names = FALSE, row.names = FALSE)   # file = DistanceOverSea.csv
-  
+
   print("<3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3
         To the next loop with the next species/location <3
         <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3") 
-}, long$Specieslist, long$name)
-
-########################################################## TESTING ############
-# Assuming `tr` is correctly defined and loaded
-
-# Test matrices
-test_sampleloc <- matrix(c(-4.159167, 50.350134), ncol = 2)
-test_uniquefile <- matrix(c(-4.159167, 50.350134, -4.161, 50.351), ncol = 2, byrow = TRUE)
-
-# Print the transition layer
-print("Transition layer tr:")
-print(tr)
-print(class(tr))
-
-# Print matrices to debug their content
-print("Test sampleloc_matrix content:")
-print(test_sampleloc)
-print("Test uniquefile_matrix content:")
-print(test_uniquefile)
-
-# Attempt shortestPath with error handling
-spatial_lines <- tryCatch({
-  gdistance::shortestPath(tr, test_sampleloc, test_uniquefile, output = "SpatialLines")
-}, error = function(e) {
-  print(paste("Error in shortestPath:", e$message))
-  NULL
-})
-
-# Check if spatial_lines is successfully created
-if (is.null(spatial_lines)) {
-  stop("shortestPath failed, check transition layer and input matrices.")
+  return(TRUE)
 }
 
-# Print the spatial_lines object to inspect its structure
-print("spatial_lines object:")
-print(spatial_lines)
-print(class(spatial_lines))
+# Apply the function to each pair of species_name and location_name
+result <- Map(process_species_location, long$Specieslist, long$name)
 
-# Set a valid CRS for the spatial_lines object
-crs_string <- "+proj=longlat +datum=WGS84 +no_defs"
-proj4string(spatial_lines) <- CRS(crs_string)
-
-# Inspect the detailed structure of spatial_lines
-print("Detailed structure of spatial_lines:")
-str(spatial_lines)
-
-# Extracting coordinates from the SpatialLines object
-coords_list <- lapply(spatial_lines@lines, function(line) line@Lines[[1]]@coords)
-
-# Calculating sea distance
-sea_distances <- sapply(coords_list, function(coords) {
-  geosphere::distVincentyEllipsoid(coords)
-})
-
-# Summing up sea distances
-total_sea_distance <- sum(sea_distances)
-
-# Printing the total sea distance
-print("Total sea distance:")
-print(total_sea_distance)
-
-
-
-# Verify the content of spatial_lines before passing it to lengthLine
-if (is(spatial_lines, "SpatialLines")) {
-  # Calculate sea distance
-  test_sea_dist <- tryCatch({
-    geosphere::lengthLine(spatial_lines)
-  }, error = function(e) {
-    print(paste("Error in lengthLine:", e$message))
-    NULL
-  })
-  
-  if (is.null(test_sea_dist)) {
-    stop("lengthLine failed, check spatial_lines object.")
-  }
-  
-  print("Test sea distance:")
-  print(test_sea_dist)
-} else {
-  stop("spatial_lines is not a SpatialLines object, check shortestPath output.")
+# write error file
+if (length(error_messages) > 0) {
+  error_df <- data.frame(error_message = unlist(error_messages))
+  write.csv(error_df, "Output/removed_species_error.csv", row.names = FALSE)
 }
-
-########################################################################## TEST UNTIL HERE
-
-
 ##########################################
 #### Clean R environment ####
 ##########################################
 rm(list = ls())
 
 #### Additional, optional, cleaning step ####
-results <- read.csv("Output/DistanceOverSea_errorsolvingalData.csv")
+
+results <- read.csv("Output/DistanceOverSea_realData.csv")
 results <- results[!is.na(results$distance),]
-write.csv(results, "Output/DistanceOverSea_errorsolvingalData.csv", quote = F, row.names = F)
+write.csv(results, "Output/DistanceOverSea_realData.csv", quote = F, row.names = F)
