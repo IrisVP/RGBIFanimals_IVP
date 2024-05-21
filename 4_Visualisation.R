@@ -72,7 +72,8 @@ AlienSpeciesCount <- Meta_RC_Alien %>%
   filter(count > 0) %>%
   group_by(No_Fraction) %>%
   dplyr::summarise(Alien = n_distinct(Specieslist))
-AlienSpeciesFraction <- left_join(SpeciesCount, AlienSpeciesCount, by = "No_Fraction")
+AlienSpeciesFraction <- left_join(SpeciesCount, AlienSpeciesCount, by = "No_Fraction") 
+# in this joining step some values for alien are NA because there are less aliens then non aliens
 AlienSpeciesFraction$AlienSpeciesFraction <- AlienSpeciesFraction$Alien / (AlienSpeciesFraction$Non_Alien + AlienSpeciesFraction$Alien)
 rm(SpeciesCount, AlienSpeciesCount)
 #Spread dfs
@@ -84,9 +85,15 @@ Meta_RC[is.na(Meta_RC)] <- 0
 Meta_RC_Alien[is.na(Meta_RC_Alien)] <- 0
 ##################################################################### UNTIL HERE
 #Calculate Alien Read Fraction
-TotalReadCount <- rowSums(Meta_RC[, 19:ncol(Meta_RC)])
-AlienReadCount <- rowSums(Meta_RC_Alien[, 19:ncol(Meta_RC_Alien)])  ### ERROR
-AlienReadFraction <- AlienReadCount/TotalReadCount
+TotalReadCount <- rowSums(Meta_RC[, 15:ncol(Meta_RC)])   # on row 15, the numbers start
+AlienReadCount <- rowSums(Meta_RC_Alien[, 15:ncol(Meta_RC_Alien)])  # on row 15, the numbers start
+print(paste0("AlienreadCount ", AlienReadCount[1], " - TotalReadCount ", TotalReadCount[1]))
+if (AlienReadCount > 0){
+  AlienReadFraction <- AlienReadCount/TotalReadCount
+} else {
+  AlienReadFraction == 0
+}
+print(AlienReadFraction)
 Meta_RC$AlienReadFraction <- AlienReadFraction
 Meta_RC <- left_join(Meta_RC, AlienSpeciesFraction, by = "No_Fraction")
 Meta_RC <- Meta_RC %>%

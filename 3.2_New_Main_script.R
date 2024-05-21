@@ -158,13 +158,10 @@ long <- long[long$value > 0, ]
 #############################################
 error_messages <- list()
   # Iterate over the locations and species names in long dataframe
-ls() <- function(species_name, location_name) {
+process_species_location <- function(species_name, location_name) {
   # Subset "long" dataframe for the current species and location
   species_data <- long %>% filter(Specieslist == species_name & name == location_name)
   print(species_data)
-  species_name <- "Aetea truncata"
-  location_name <- "Getxo"
-  #species_data <- c("Aetea truncata" = species_name & "Koster" = location_name)
   # print location name as a check
   print(paste0("Location_name for species in df long= ", location_name))
   # use grep to get the row from the Coordinates df where location_name is present
@@ -237,7 +234,7 @@ ls() <- function(species_name, location_name) {
   print(paste0("distances have been calculated for ", species_name, " and ", location_name, " in line 220"))
   # 'fun =' which method is used = this method is for distances on earth (ellipsoid)
   
-  ############################################################## CHECK
+  # SOME CHECKS
   if (any(is.na(samplelocation$Longitude)) || any(is.na(samplelocation$Latitude))) {
     stop("NA values found in samplelocation coordinates")
   }
@@ -245,25 +242,30 @@ ls() <- function(species_name, location_name) {
     stop("NA values found in unique_file coordinates")
   }
   
-  ##############################################################
-  
   ### step2 ### Calculate the length through sea for the closest point
   ### make matrices out of longitudes and latitudes of samplelocation and unique_file
   sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
   uniquefile_matrix <- matrix(as.numeric(c(unique_file$Longitude, unique_file$Latitude)), ncol = 2)
-  ###############################################!!!!!!!!!!!!!!  CHECK
+  
+  # CHECK
   if (nrow(sampleloc_matrix) != 1 || nrow(uniquefile_matrix) == 0) {
     stop("Incorrect dimensions of the matrices")
   }
-  # sea_dist calculation and error catching
+  # sea_dist calculation and error catching using function trycatch() up until line 391
   sea_dist <- NA
   result <- tryCatch({
     
     ###################################################################################### SEA_DIST
     #sea_dist <- geosphere::lengthLine(gdistance::shortestPath(tr, sampleloc_matrix, uniquefile_matrix, output = "SpatialLines"))
     
-    #### NEW
+    #### Line above in comments has been replaced by ShortestPath and lengthLine functions original code
+    #### Below you find ShortestPath function first and after that lengthLine
+    #### This is an important adjustment, because when using the original line, not all organisms
+    #### are calculated. There were too many errors. Some debug prints have been put in comments here
+    
+    ###################
     ### SHORTESTPATH
+    ###################
     
     #function(x, origin, goal, output)
     x <- tr
@@ -287,7 +289,7 @@ ls() <- function(species_name, location_name) {
     
     shortestPaths <- shortest_paths(adjacencyGraph,
                                         indexOrigin, indexGoal)$vpath
-    print(shortestPaths)
+    #print(shortestPaths)
     if(output=="SpatialLines")
     {
       linesList <- vector(mode="list", length=length(shortestPaths))
@@ -307,10 +309,15 @@ ls() <- function(species_name, location_name) {
         
       result <- sp::SpatialLines(LinesObject, proj4string = sp::CRS(projection(x)))
     }
-    print(result)
+    #print(result)
     
+    ################
     ### LENGTHLINE
-    # function(line)
+    ################
+    
+    library(sp)
+    library(raster)
+    
     line <- result
     
     if (inherits(line, 'SpatialPolygons')) {
@@ -325,26 +332,32 @@ ls() <- function(species_name, location_name) {
     }
     
     # Debug: Check structure of line after conversion
-    print(head(line))
+    #print(head(line))
     
     ids <- unique(line[,1])
     
     len <- rep(0, length(ids))
     
     # Debug: Check unique IDs and their count
-    print(ids)
-    print(length(ids))
+    #print(ids)
+    #print(length(ids))
     
     for (i in 1:length(ids)) {
-      d <- line[line[,1] == ids[i], ]
-      print(paste0("dim(d)", dim(d)))
+      d <- line[line[,1] == ids[i], , drop = FALSE]
+      
+      # debug: check dimensions of d
+      #print(paste0("dim(d)", dim(d)))
       
       parts <- unique(d[,2])
-      print(parts)
+      
+      # debug: check unique parts
+      #print(parts)
+      
       for (p in parts) {
         dd <- d[d[,2] == p, ,drop=FALSE]
         
-        print(paste0("dim(dd))", dim(dd)))
+        # debug: check dimensions of dd
+        #print(paste0("dim(dd))", dim(dd)))
         
         if(nrow(dd) < 2) {
           warning("Not enough points to calculate distance for part ", p, " of object ", ids[i])
@@ -357,26 +370,25 @@ ls() <- function(species_name, location_name) {
       }
     }
     sea_dist <- len
-    print(sea_dist)
-    #### NEW
+    print(paste0("sea_dist: ", sea_dist))
+    #### end of function lengthLine
     
     # Continue processing if no error
     print(paste0("sea distances have been calculated for ", species_name, " and ", location_name, " in line 230"))
     
-    
-    
-    #########################################################################################
-    #return(sea_dist)
+    ### Still in trycatch() function: below is the code for the error catching part of trycatch
+
   }, error = function(e) {
     error_message <- paste0("An error occurred during calculation of sea_dist on line 257 for ", species_name, " in ", location_name)
-    cat(error_message, "\n")
+    cat(error_message, "\n")  
     
     # Collect the error message
     error_messages <<- append(error_messages, list(error_message))
     
     # Return FALSE to indicate that this iteration should be skipped
     return(FALSE)
-  })
+    
+  }) ### trycatch() closed
   
   # Check if sea_dist was calculated successfully
   if (length(sea_dist) == 1 && is.na(sea_dist)){
@@ -390,7 +402,7 @@ ls() <- function(species_name, location_name) {
   print("distances further than sea_dist have been filtered out")
   #print(filtered)
   ### retain distances that are equal to or smaller than sea_dist calculation
-  ### why do I get NA values here?
+  ### NA values coming from bug in shortestPath function
   ### removing NA values
   cleaned_filtered <- na.omit(filtered)
 
@@ -418,7 +430,7 @@ ls() <- function(species_name, location_name) {
     # pmax is used to get element-wise maximum, abs() to get absolute differences
     # Calculate the index of the nth sorted distance
     sorted_distances <- sort(OccurrenceData_new$distance)
-    n <- length(sorted_distances)  # Replace 'n' with the desired index
+    n <- length(sorted_distances)
     dist <- ceiling(sorted_distances[n])
     print(paste0("dist ====", dist))
     OccurrenceData_new <- OccurrenceData_new[OccurrenceData_new$distance < dist,] 
@@ -457,7 +469,7 @@ result <- Map(process_species_location, long$Specieslist, long$name)
 # write error file
 if (length(error_messages) > 0) {
   error_df <- data.frame(error_message = unlist(error_messages))
-  write.csv(error_df, "Output/removed_species_error.csv", row.names = FALSE)
+  write.csv(error_df, "Output/removed_species_error_new.csv", row.names = FALSE)
 }
 ##########################################
 #### Clean R environment ####
