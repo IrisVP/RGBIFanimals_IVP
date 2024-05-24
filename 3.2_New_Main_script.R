@@ -21,6 +21,8 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # requires installat
 df <- read.csv("Output/RealFirst10_Species_Location.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
+# Read the species_location file
+Species_Location <- read.csv("Output/Species_Location.csv")
 
 ############################################################################################
 # CREATE A RASTERED WORLD
@@ -54,25 +56,24 @@ if(file.exists("Inputs/new_tr.rdata")){
 ############################################################################################
 # FIND SHORTEST PATH FOR EACH SAMPLING LOCATION TO THE SPECIES OBSERVATION
 ############################################################################################
+
 sapply(df$Specieslist, function(species){
   ### FIND CLOSEST REGISTERED PLACE ###
   # Add headers to the output file if it is not made already
-  #species <- "Halichondria bowerbanki"
   print(species)
+  file <- "Output/ShortestPath.csv"
   if(!file.exists("Output/ShortestPath.csv")){
     write.table(paste(c("Speciesname", "Total observations", "Unique locations/observations", 
                         as.character(Coordinates$Observatory.ID), "Errors"),collapse = ","),
-                file = "Output/ShortestPath.csv", append = TRUE, quote = FALSE, 
+                file = file, append = TRUE, quote = FALSE, 
                 col.names = FALSE, row.names = FALSE)
   }
   ### CHECK IN FILE
   # Check the occurrence data, If there is an error there it catches it and writes an error in the output file
-  file <- "Output/ShortestPath.csv"
   contents <- readChar(file, file.info(file)$size)
-  length <- length(grep(paste(species, collapse = ","), contents))
   
-  if(length > 0){
-      warning(paste(species, "has already been written to the file"))
+  if (any(grepl(paste(species, collapse = ","), contents))) {
+    warning(paste(species, "has already been written to the file"))
   }
   ### CHECK OCCURRENCE DATA ###
   filename <- paste0("OccurrenceData/", species, ".csv")
@@ -84,12 +85,12 @@ sapply(df$Specieslist, function(species){
     res <- occ_data(scientificName = species,
                    hasCoordinate = TRUE, limit = 10000) #changed limit, was 200000
     if (is.null(res) || !is.list(res) || !is.list(res$data)) {
-      print(paste("res$data is NULL for species:", species))
+      #print(paste("res$data is NULL for species:", species))
       warning("No records found in GBIF for this species")
       # Error handling: write error message to CSV
       write.table(paste(c(species, rep("", 15), "ERROR while getting the occurrence data"),
                         collapse = ","),
-                  file = "Output/ShortestPath.csv", append = TRUE, quote = FALSE, 
+                  file = file, append = TRUE, quote = FALSE, 
                   col.names = FALSE, row.names = FALSE)
       
     } else {
@@ -102,42 +103,58 @@ sapply(df$Specieslist, function(species){
         # Only keep the longitudes between -180 & 180 and latitudes between -90 & 90
         res_new <- res_new[res_new$Longitude >= -180 & res_new$Longitude <= 180 & 
                              res_new$Latitude >= -180 & res_new$Latitude <= 180, ]
-        # Save number of rows in obs
-        obs <- nrow(res_new)
-        # Remove duplicate coordinates
-        res_new <- res_new[!duplicated(res_new[, c("Longitude", "Latitude")]),]
-        # Save number of UNIQUE rows in uobs
-        uobs <- nrow(res_new)
         
-        # try(res <- get_occurrence_data(check_official_name(species))) ERROR
-        if (nrow(res_new) == 0) stop("No information found for this species")
-        write.csv(res_new, filename)
-        
-        # Plot the distribution
-        plotname <- paste0("plots/", species, ".jpeg")
-        if(!file.exists(plotname)){
-          ggplot() +
-            geom_polygon(aes(x = long, y = lat, group = group), data = map_data("world")) +
-            geom_hex(aes(x= Longitude, y = Latitude), data = res) +
-            # coord_cartesian(xlim = c(-30, 60), ylim = c(30,70)) +
-            # geom_label_repel(aes(x= Longitude, y = Latitude, label = Observatory.ID), data = Coordinates) +
-            geom_point(aes(x= Longitude, y = Latitude), data = Coordinates, col = "red") + 
-            ggtitle(title)
-          ggsave(plotname)
-        }
-        # Calculate the distances between all the points and all the locations
-        distances <- distm(res_new[, c("Longitude", "Latitude")], Coordinates[, c("Longitude", "Latitude")], 
-                           fun = distVincentyEllipsoid)
-        # Find the closest point to every sampling location
-        shortest <- round(apply(distances, 2, min), 0)
-        # Writing results to the ShortestPath.csv file
-        write.table(paste(c(species, obs, uobs, shortest, ""),collapse = ","), 
-                    file = "Output/ShortestPath.csv", append = TRUE, quote = FALSE, 
-                    col.names = FALSE, row.names = FALSE)
-        
-        }
     }
-    
+  }
+    # Save number of rows in obs
+    obs <- nrow(res_new)
+    # Remove duplicate coordinates
+    res_new <- res_new[!duplicated(res_new[, c("Longitude", "Latitude")]),]
+    # Save number of UNIQUE rows in uobs
+    uobs <- nrow(res_new)
+        
+    # try(res <- get_occurrence_data(check_official_name(species))) ERROR
+    if (nrow(res_new) == 0) stop("No information found for this species")
+    write.csv(res_new, filename)
+        
+    # Plot the distribution
+    plotname <- paste0("plots/", species, ".jpeg")
+    if(!file.exists(plotname)){
+      ggplot() +
+        geom_polygon(aes(x = long, y = lat, group = group), data = map_data("world")) +
+        geom_hex(aes(x= Longitude, y = Latitude), data = res_new) +
+        # coord_cartesian(xlim = c(-30, 60), ylim = c(30,70)) +
+        # geom_label_repel(aes(x= Longitude, y = Latitude, label = Observatory.ID), data = Coordinates) +
+        geom_point(aes(x= Longitude, y = Latitude), data = Coordinates, col = "red") + 
+        ggtitle(species)
+      ggsave(plotname)
+    }
+        
+    # next part calculates line distances between samplelocations and closest occurrence data
+    row_index <- grep(species, Species_Location$Specieslist) # get the row index for the species in Species_location
+    selected_row <- Species_Location[row_index,] # select the row with that row index
+    print(selected_row)
+    distances <- c() # start a distances list
+    for (col in names(selected_row[-1])){  # iterate over columns in this row
+      if (selected_row[[col]]  == 0) {  # if value == 0
+        distances <- c(distances, "0")  # save zero in the list
+      } else {
+        Location_coord <- grep(col, Coordinates$Observatory.ID) # get the location from coordinates
+        Location <- Coordinates[Location_coord, 2-3] # save Longitude and Latitude in Location variable
+        
+        # compute distances using distVincentyEllipsoid
+        dist_matrix <- distm(res_new[, c("Longitude", "Latitude")], Location, 
+                              fun = distVincentyEllipsoid)
+        # Find the closest point to every sampling location
+        shortest <- round(apply(dist_matrix, 2, min), 0)
+        distances <- c(distances, shortest)
+      }
+    }
+    print(distances)
+    # Writing results to the ShortestPath.csv file
+    write.table(paste(c(species, obs, uobs, distances, ""),collapse = ","), 
+                file = file, append = TRUE, quote = FALSE, 
+                col.names = FALSE, row.names = FALSE)
 })
 
 ############################################################################################
@@ -162,8 +179,6 @@ process_species_location <- function(species_name, location_name) {
   # Subset "long" dataframe for the current species and location
   species_data <- long %>% filter(Specieslist == species_name & name == location_name)
   print(species_data)
-  # print location name as a check
-  print(paste0("Location_name for species in df long= ", location_name))
   # use grep to get the row from the Coordinates df where location_name is present
   location_row_index <- grep(location_name, Coordinates$Observatory.ID)
   # save longitude and latitude for the row that you selected with grep
@@ -171,8 +186,8 @@ process_species_location <- function(species_name, location_name) {
   latitude <- Coordinates[location_row_index, "Latitude"]
   # make a dataframe out of the longitude and latitude and print as a check
   samplelocation <- data.frame(Longitude = longitude, Latitude = latitude)
-  print(paste0("Location => samplelocation$Longitude= ", samplelocation$Longitude))
-  print(paste0("Location => samplelocation$Latitude= ", samplelocation$Latitude))
+  #print(paste0("Location => samplelocation$Longitude= ", samplelocation$Longitude))
+  #print(paste0("Location => samplelocation$Latitude= ", samplelocation$Latitude))
   
   #####################################################################################
   # CHECK IF FILE WITH OCCURRENCE DATA IN OCCURRENCEDATA DIRECTORY EXISTS
@@ -183,7 +198,7 @@ process_species_location <- function(species_name, location_name) {
   # if file doesn't exist: make one, get data, and put into variable res
   filename_occ <- paste0("OccurrenceData/", species_name, ".csv")
   if (file.exists(filename_occ) == TRUE) {
-    print(filename_occ)  # = check print
+    #print(filename_occ)  # = check print
     res <- read.csv(filename_occ, header = TRUE)
   } else {
     res <- occ_data(scientificName = species_name, hasCoordinate = TRUE, limit = 100000) #changed limit, was 200000
@@ -231,7 +246,7 @@ process_species_location <- function(species_name, location_name) {
   distances <- as.numeric(distm(samplelocation[,c("Longitude", "Latitude")], 
                                 unique_file[,c("Longitude", "Latitude")], 
                                 fun = distVincentyEllipsoid))
-  print(paste0("distances have been calculated for ", species_name, " and ", location_name, " in line 220"))
+  #print(paste0("distances have been calculated for ", species_name, " and ", location_name, " in line 220"))
   # 'fun =' which method is used = this method is for distances on earth (ellipsoid)
   
   # SOME CHECKS
@@ -370,11 +385,11 @@ process_species_location <- function(species_name, location_name) {
       }
     }
     sea_dist <- len
-    print(paste0("sea_dist: ", sea_dist))
+    #print(paste0("sea_dist: ", sea_dist))
     #### end of function lengthLine
     
     # Continue processing if no error
-    print(paste0("sea distances have been calculated for ", species_name, " and ", location_name, " in line 230"))
+    #print(paste0("sea distances have been calculated for ", species_name, " and ", location_name, " in line 230"))
     
     ### Still in trycatch() function: below is the code for the error catching part of trycatch
 
@@ -399,7 +414,7 @@ process_species_location <- function(species_name, location_name) {
   
   ### step3 ### filter out the datapoints further away than the sea_dist
   filtered <- unique_file[distances <= sea_dist,]
-  print("distances further than sea_dist have been filtered out")
+  #print("distances further than sea_dist have been filtered out")
   #print(filtered)
   ### retain distances that are equal to or smaller than sea_dist calculation
   ### NA values coming from bug in shortestPath function
@@ -412,11 +427,11 @@ process_species_location <- function(species_name, location_name) {
     unique_file[distances <= sea_dist + 16000,] ### if there are 0 rows, save distances in unique_file
     ### that are less or equal to sea_dist + 16000
   }
-  print("cleaned_filtered file has been made")
+  #print("cleaned_filtered file has been made")
   
   # save the number of rows in 'inrange'
   species_data$inrange <- nrow(OccurrenceData_new)
-  print(paste0("nrow(OccurrenceData_new) == ", species_data$inrange))
+  #print(paste0("nrow(OccurrenceData_new) == ", species_data$inrange))
   
   #########################################################
   ### FILTER N CLOSEST COORDINATE CEILING ###
@@ -426,13 +441,13 @@ process_species_location <- function(species_name, location_name) {
     print("start calculating distances...")
     OccurrenceData_new$distance <- pmax(abs(OccurrenceData_new$Longitude - samplelocation$Longitude), 
                                         abs(OccurrenceData_new$Latitude - samplelocation$Latitude))
-    print("distances have been calculated, calculating dist and OccurrenceData_new now...")
+    #print("distances have been calculated, calculating dist and OccurrenceData_new now...")
     # pmax is used to get element-wise maximum, abs() to get absolute differences
     # Calculate the index of the nth sorted distance
     sorted_distances <- sort(OccurrenceData_new$distance)
     n <- length(sorted_distances)
     dist <- ceiling(sorted_distances[n])
-    print(paste0("dist ====", dist))
+    #print(paste0("dist ====", dist))
     OccurrenceData_new <- OccurrenceData_new[OccurrenceData_new$distance < dist,] 
     # keep rows where distance is less than 'dist'
   }
@@ -457,9 +472,6 @@ process_species_location <- function(species_name, location_name) {
   write.table(paste(species_data,collapse = ","), file = filename, append = TRUE, quote = FALSE, 
               col.names = FALSE, row.names = FALSE)   # file = DistanceOverSea.csv
 
-  print("<3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3
-        To the next loop with the next species/location <3
-        <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3 <3") 
   return(TRUE)
 }
 

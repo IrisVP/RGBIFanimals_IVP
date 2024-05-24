@@ -10,8 +10,8 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #Plot rarefaction results
 Read_Count_Species_ARMS <- read.csv("Output/Read_Count_Species_ARMS_10.csv")
 OTU_Table_Rar <- Read_Count_Species_ARMS
-OTU_Table_Rar <- column_to_rownames(OTU_Table_Rar, "Specieslist")
-OTU_Table_Rar <- as.matrix(t(OTU_Table_Rar))
+OTU_Table_Rar <- column_to_rownames(OTU_Table_Rar, "Specieslist") # turn around the dataframe
+OTU_Table_Rar <- as.matrix(t(OTU_Table_Rar)) # make a matrix out of the dataframe
 
 Rarefaction_df <- rarecurve(OTU_Table_Rar, step = 20,
                             col = "blue", 
@@ -24,7 +24,7 @@ ggplot(Rarefaction_df, aes(x = Sample, y = Species, group = Site)) +
   scale_x_continuous(expand = c(0, 500)) +
   ylab("Number of species") +
   xlab("Number of sequences")
-
+### depicts whether the sampling depth was sufficient or not to estimate the diversity
 
 #### Alien Read Fraction and Alien Species Fraction ####
 GBIF_Distance <- read.csv("Output/DistanceOverSea.csv")
@@ -35,13 +35,14 @@ GBIF_Distance$distance <- GBIF_Distance$distance/1000
 #Assign alien status
 Alien_Distance_Threshold <- 250
 #Most NAs are assigned due to a bug in the ShortestPath function, where the sampling location and GBIF occurrence are too close to be measured.
-  #Therefore, change al NAs to the maximum potential error from the ShortestPath and assume these are native species
+#Therefore, change al NAs to the maximum potential error from the ShortestPath and assume these are native species
+### this has been solved in the 3.2_New_Main_script, so there are no NA's anymore
 GBIF_Distance$distance[is.na(GBIF_Distance$distance)] <- 16
 GBIF_Distance$Alien_status <- ifelse(GBIF_Distance$distance > Alien_Distance_Threshold, "YES", "NO")
 rm(Alien_Distance_Threshold)
 #Remove lines where distance is not calculated
 GBIF_Distance <- GBIF_Distance[complete.cases(GBIF_Distance), ]
-#Create df with only aliens
+#Create df with only aliens and one with only natives
 Only_Aliens <- GBIF_Distance %>% filter(Alien_status == "YES") %>% select(Specieslist, name, value, distance)
 Only_Natives <- GBIF_Distance %>% filter(Alien_status == "NO") %>% select(Specieslist, name, value, distance)
 rm(GBIF_Distance)
@@ -83,18 +84,43 @@ Meta_RC_Alien <- Meta_RC_Alien %>% select(-Species_Obs) %>% spread(Specieslist, 
 #Fill empty cells with 0
 Meta_RC[is.na(Meta_RC)] <- 0
 Meta_RC_Alien[is.na(Meta_RC_Alien)] <- 0
-##################################################################### UNTIL HERE
-#Calculate Alien Read Fraction
-TotalReadCount <- rowSums(Meta_RC[, 15:ncol(Meta_RC)])   # on row 15, the numbers start
-AlienReadCount <- rowSums(Meta_RC_Alien[, 15:ncol(Meta_RC_Alien)])  # on row 15, the numbers start
-print(paste0("AlienreadCount ", AlienReadCount[1], " - TotalReadCount ", TotalReadCount[1]))
-if (AlienReadCount > 0){
-  AlienReadFraction <- AlienReadCount/TotalReadCount
-} else {
-  AlienReadFraction == 0
+
+# remove rows that only have zeros for Meta_RC
+rows_to_drop <- c()
+for (row in 1:nrow(Meta_RC)) {
+  if (all(Meta_RC[row, 15:ncol(Meta_RC)] == 0)) {
+    rows_to_drop <- c(rows_to_drop, row)
+  }
 }
-print(AlienReadFraction)
-Meta_RC$AlienReadFraction <- AlienReadFraction
+Meta_RC <- Meta_RC[-rows_to_drop, ]  # drop rows
+
+# remove rows that only have zeros for Meta_RC_Alien
+rows_to_drop <- c()
+for (row in 1:nrow(Meta_RC_Alien)) {
+  if (all(Meta_RC_Alien[row, 15:ncol(Meta_RC_Alien)] == 0)) {
+    rows_to_drop <- c(rows_to_drop, row)
+  }
+}
+Meta_RC_Alien <- Meta_RC_Alien[-rows_to_drop, ]  # drop rows
+rm(rows_to_drop)
+rownames(Meta_RC) <- NULL   # reset row numbers after removing rows
+rownames(Meta_RC_Alien) <- NULL
+##################################################################### FIRST ERROR
+#Calculate Alien Read Fraction
+Meta_RC$AlienReadFraction <- 0
+for (i in 1:nrow(Meta_RC_Alien)) {
+  AlienReadCount <- rowSums(Meta_RC_Alien[i, 15:ncol(Meta_RC_Alien)])
+  print(paste0("AlienReadCount = ", AlienReadCount))
+  lol <- Meta_RC_Alien[i, 1]
+  n <- grep(lol, Meta_RC[,1])
+  TotalReadCount <- rowSums(Meta_RC[n, 15:ncol(Meta_RC)])
+  print(paste0("TotalReadCount = ", TotalReadCount))
+  # check if TotalReadCount is zero: to not divide by zero
+  Alien_Fraction <- AlienReadCount/TotalReadCount
+  print(paste0("Alien_Fraction = ", Alien_Fraction))
+  Meta_RC$AlienReadFraction[n] <- Alien_Fraction
+}
+
 Meta_RC <- left_join(Meta_RC, AlienSpeciesFraction, by = "No_Fraction")
 Meta_RC <- Meta_RC %>%
   select(AlienReadFraction, AlienSpeciesFraction, Non_Alien, Alien, everything())
@@ -105,7 +131,10 @@ Meta_RC_100 <- Meta_RC
 Meta_RC_100 <- Meta_RC_100[complete.cases(Meta_RC_100), ]
 Meta_RC_100 <- filter(Meta_RC_100, rowSums(Meta_RC_100[,19:ncol(Meta_RC_100)]) > 100)
 
+####################################
 ##### NMDS plot BOLDigger ARMS #####
+####################################
+
 Meta_RC[is.na(Meta_RC)] <- 0
 Meta_RC_Alien[is.na(Meta_RC_Alien)] <- 0
 #Only keep complete cases
@@ -118,7 +147,7 @@ Meta_RC_1000 <- filter(Meta_RC_1000, rowSums(Meta_RC_1000[,19:ncol(Meta_RC_1000)
 Com <- as.data.frame(Meta_RC_100[, 19:ncol(Meta_RC_100)])
 Env <- Meta_RC_100 %>% select(AlienReadFraction, AlienSpeciesFraction, Country, Observatory.ID, Latitude, Longitude, Depth_m, Monitoring_area, Year, Sample_region_country)
 Com <- sapply(Com, as.numeric)
-
+############################################################################## SECOND ERROR
 #Calculate nmds
 nmds <- metaMDS(Com, distance = "bray")
 en <- envfit(nmds, Env, permutations = 999, na.rm = T)
