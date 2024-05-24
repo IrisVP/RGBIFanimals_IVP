@@ -102,7 +102,7 @@ sapply(df$Specieslist, function(species){
         res_new <- res_new[!is.na(res_new$Latitude) & !is.na(res_new$Longitude),]
         # Only keep the longitudes between -180 & 180 and latitudes between -90 & 90
         res_new <- res_new[res_new$Longitude >= -180 & res_new$Longitude <= 180 & 
-                             res_new$Latitude >= -180 & res_new$Latitude <= 180, ]
+                             res_new$Latitude >= -90 & res_new$Latitude <= 90, ]
         
     }
   }
@@ -127,7 +127,7 @@ sapply(df$Specieslist, function(species){
         # geom_label_repel(aes(x= Longitude, y = Latitude, label = Observatory.ID), data = Coordinates) +
         geom_point(aes(x= Longitude, y = Latitude), data = Coordinates, col = "red") + 
         ggtitle(species)
-      ggsave(plotname)
+      ggsave(plotname, height = 20, width = 40, units = "cm")  # reset height and width for plots here!
     }
         
     # next part calculates line distances between samplelocations and closest occurrence data
@@ -242,7 +242,7 @@ process_species_location <- function(species_name, location_name) {
   ### FILTER ON DISTANCE ###
   # Remove samples taken further away than the closest point
   ############################################################
-  ### step1 ### calculate all distances to samplelocation
+  ### step1 ### calculate all distances to samplelocation  => distances through sea?
   distances <- as.numeric(distm(samplelocation[,c("Longitude", "Latitude")], 
                                 unique_file[,c("Longitude", "Latitude")], 
                                 fun = distVincentyEllipsoid))
@@ -275,8 +275,8 @@ process_species_location <- function(species_name, location_name) {
     
     #### Line above in comments has been replaced by ShortestPath and lengthLine functions original code
     #### Below you find ShortestPath function first and after that lengthLine
-    #### This is an important adjustment, because when using the original line, not all organisms
-    #### are calculated. There were too many errors. Some debug prints have been put in comments here
+    #### This is an important adjustment, because when using the original line,
+    #### There were too many errors. Some debug prints have been put in comments here
     
     ###################
     ### SHORTESTPATH

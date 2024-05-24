@@ -105,9 +105,8 @@ df <- Data_LOI
 colnames(df) <- c("sequence", Taxonomy, "Specieslist", "Similarity", MetaData$No_Fraction)
 Column_Order <- unique(colnames(df))
 
-#Merge columns with duplicate names and sum contents
-df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]),
-              function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
+#Merge columns with duplicate names and sum contents => merge different fractions from 1 ARMS into one readcount
+df2 <- sapply(unique(colnames(df)[duplicated(colnames(df))]), function(x) rowSums(df[,grepl(paste(x, "$", sep=""), colnames(df))]))
 Read_Count_ASVs_ARMS <- cbind(df2, df[,!duplicated(colnames(df)) &
                                         !duplicated(colnames(df), fromLast = TRUE)])
 rm(df, df2)
