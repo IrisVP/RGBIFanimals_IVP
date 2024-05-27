@@ -1,14 +1,14 @@
 #Load necessary packages
 pacman::p_load(dplyr, tidyverse, phyloseqGraphTest, rstatix, ggpubr, vegan, ggplot2)
 
-### phyloseq doesn't exist anymore  => but phyloseqGraphTest does
+# replaced Phyloseq with PhyloseqGraphTest
 
 #Set wd to wherever all files are stored
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 #### Rarefaction curves ####
 #Plot rarefaction results
-Read_Count_Species_ARMS <- read.csv("Output/Read_Count_Species_ARMS_10.csv")
+Read_Count_Species_ARMS <- read.csv("Output/Read_Count_Species_ARMS.csv")
 OTU_Table_Rar <- Read_Count_Species_ARMS
 OTU_Table_Rar <- column_to_rownames(OTU_Table_Rar, "Specieslist") # turn around the dataframe
 OTU_Table_Rar <- as.matrix(t(OTU_Table_Rar)) # make a matrix out of the dataframe
@@ -17,17 +17,18 @@ Rarefaction_df <- rarecurve(OTU_Table_Rar, step = 20,
                             col = "blue", 
                             cex = 0.6, tidy = T)
 ggplot(Rarefaction_df, aes(x = Sample, y = Species, group = Site)) +
-  geom_line(color = "blue", alpha = 0.5) + 
+  geom_line(color = "blue", alpha = 0.5) +
   #geom_vline(xintercept = 100, linetype = "dashed", color = "black", alpha = 0.6, size = 0.6) +
   theme_bw() +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05)), breaks = seq(0, 80, 20)) +
   scale_x_continuous(expand = c(0, 500)) +
   ylab("Number of species") +
   xlab("Number of sequences")
+  
 ### depicts whether the sampling depth was sufficient or not to estimate the diversity
 
 #### Alien Read Fraction and Alien Species Fraction ####
-GBIF_Distance <- read.csv("Output/DistanceOverSea.csv")
+GBIF_Distance <- read.csv("Example_Output/DistanceOverSea.csv")
 #Remove duplicates
 GBIF_Distance <- unique(GBIF_Distance)
 #Convert distance to km
@@ -43,8 +44,8 @@ rm(Alien_Distance_Threshold)
 #Remove lines where distance is not calculated
 GBIF_Distance <- GBIF_Distance[complete.cases(GBIF_Distance), ]
 #Create df with only aliens and one with only natives
-Only_Aliens <- GBIF_Distance %>% filter(Alien_status == "YES") %>% select(Specieslist, name, value, distance)
-Only_Natives <- GBIF_Distance %>% filter(Alien_status == "NO") %>% select(Specieslist, name, value, distance)
+Only_Aliens <- GBIF_Distance %>% filter(Alien_status == "YES") %>% dplyr::select("Specieslist", "name", "value", "distance")
+Only_Natives <- GBIF_Distance %>% filter(Alien_status == "NO") %>% dplyr::select("Specieslist", "name", "value", "distance")
 rm(GBIF_Distance)
 #Create factor to be able to assign read count and metadata to alien status
 Alien_Species_Obs <- paste0(Only_Aliens$Specieslist, "_", Only_Aliens$name)
@@ -52,10 +53,10 @@ Alien_Species_Obs <- paste0(Only_Aliens$Specieslist, "_", Only_Aliens$name)
 #Spread df
 Only_Aliens <- spread(data = Only_Aliens, key = name, value = value)
 #Prepare main dataframe with read counts to assign alien status
-RC_Species_Obs_Year <- Read_Count_Species_ARMS %>% ungroup() %>% select(Specieslist:ncol(Read_Count_Species_ARMS))
+RC_Species_Obs_Year <- Read_Count_Species_ARMS %>% ungroup() %>% dplyr::select(Specieslist:ncol(Read_Count_Species_ARMS))
 RC_Species_Obs_Year <- RC_Species_Obs_Year %>% gather(key = "No_Fraction", value = "count", 2:ncol(RC_Species_Obs_Year))
 MetaData <- read.csv("Inputs/MetaData_Adjusted.csv")
-Meta_RC <- MetaData %>% select(-Fraction, -Filename)
+Meta_RC <- MetaData %>% dplyr::select(-Fraction, -Filename)
 Meta_RC <- left_join(RC_Species_Obs_Year, Meta_RC, by = "No_Fraction", relationship = "many-to-many")
 ### changed upper line to relationship = "many-to-many"
 Meta_RC$Species_Obs <- paste0(Meta_RC$Specieslist, "_", Meta_RC$Observatory.ID)
@@ -78,8 +79,8 @@ AlienSpeciesFraction <- left_join(SpeciesCount, AlienSpeciesCount, by = "No_Frac
 AlienSpeciesFraction$AlienSpeciesFraction <- AlienSpeciesFraction$Alien / (AlienSpeciesFraction$Non_Alien + AlienSpeciesFraction$Alien)
 rm(SpeciesCount, AlienSpeciesCount)
 #Spread dfs
-Meta_RC <- Meta_RC %>% select(-Species_Obs) %>% spread(Specieslist, count)
-Meta_RC_Alien <- Meta_RC_Alien %>% select(-Species_Obs) %>% spread(Specieslist, count)
+Meta_RC <- Meta_RC %>% dplyr::select(-Species_Obs) %>% spread(Specieslist, count)
+Meta_RC_Alien <- Meta_RC_Alien %>% dplyr::select(-Species_Obs) %>% spread(Specieslist, count)
 
 #Fill empty cells with 0
 Meta_RC[is.na(Meta_RC)] <- 0
@@ -123,7 +124,7 @@ for (i in 1:nrow(Meta_RC_Alien)) {
 
 Meta_RC <- left_join(Meta_RC, AlienSpeciesFraction, by = "No_Fraction")
 Meta_RC <- Meta_RC %>%
-  select(AlienReadFraction, AlienSpeciesFraction, Non_Alien, Alien, everything())
+  dplyr::select(AlienReadFraction, AlienSpeciesFraction, Non_Alien, Alien, everything())
 rm(TotalReadCount, AlienReadCount)
 
 #Make dataframe which filters on at least 100 summed reads per ARMS
@@ -145,7 +146,7 @@ Minimum_RC <- 1000
 Meta_RC_1000 <- filter(Meta_RC_1000, rowSums(Meta_RC_1000[,19:ncol(Meta_RC_1000)]) > Minimum_RC)
 #Select Species composition and environmental variables
 Com <- as.data.frame(Meta_RC_100[, 19:ncol(Meta_RC_100)])
-Env <- Meta_RC_100 %>% select(AlienReadFraction, AlienSpeciesFraction, Country, Observatory.ID, Latitude, Longitude, Depth_m, Monitoring_area, Year, Sample_region_country)
+Env <- Meta_RC_100 %>% dplyr::select(AlienReadFraction, AlienSpeciesFraction, Country, Observatory.ID, Latitude, Longitude, Depth_m, Monitoring_area, Year, Sample_region_country)
 Com <- sapply(Com, as.numeric)
 ############################################################################## SECOND ERROR
 #Calculate nmds
@@ -196,7 +197,7 @@ ggboxplot(Meta_RC, x = "Monitoring_area", y = "AlienSpeciesFraction", palette = 
 
 #Stretch df to fit barplot
 Barplot_df <- Meta_RC_100 %>% 
-  select(No_Fraction, Non_Alien, Alien, Monitoring_area, ) %>% 
+  dplyr::select(No_Fraction, Non_Alien, Alien, Monitoring_area, ) %>% 
   arrange(Monitoring_area, Non_Alien)
 #Save PlotOrder
 Barplot_df <- Barplot_df %>% arrange(factor(Monitoring_area, levels = c("Industrial port", "Marina", "LHI", "MPA")))
@@ -233,7 +234,7 @@ rownames(MetaData) <- MetaData$Filename
 #Taxonomic info
 Data_LOI <- read.csv("Output/Data_LOI.csv")
 Tax_Info <- Data_LOI %>% 
-  select(Phylum:Specieslist, -Species) %>%
+  dplyr::select(Phylum:Specieslist, -Species) %>%
   distinct() 
 Tax_Info <- Tax_Info[!duplicated(Tax_Info$Specieslist),]
 rownames(Tax_Info) <- Tax_Info$Specieslist
@@ -247,7 +248,7 @@ physeq <- phyloseq(otu_table(OTU_Table, taxa_are_rows = FALSE),
 #Add Plot Order
 PlotOrder_phy <- MetaData %>% 
   arrange(Sample_region_country, Observatory.ID, Year) %>%
-  select(Filename) %>%
+  dplyr::select(Filename) %>%
   distinct()
 PlotOrder_phy <- as.list(PlotOrder_phy)
 sample_data(physeq)$NewID <- factor(sample_names(physeq))
