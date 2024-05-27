@@ -11,6 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 3.2_New_Main_script.R script
 
+MAKE A LIST OF DATAFRAMES AND OUTPUTFILES WITH SOME EXTRA INFORMATION AND COLUMN NAMES AND DETAILS (suggestion from Mati)
+
+
 ### Input
 The two files that are loaded in the beginning of the script are Output/Species_Location.csv
 and Inputs/Coordinates.csv
