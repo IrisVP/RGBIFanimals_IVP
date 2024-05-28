@@ -3,4 +3,6 @@
 Inputs/
 Output/
 OccurrenceData/
+OccurrenceData_test/
+test_outputs/
 Plots/
