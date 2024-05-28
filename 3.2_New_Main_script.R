@@ -179,9 +179,6 @@ process_species_location <- function(species_name, location_name) {
   # Subset "long" dataframe for the current species and location
   species_data <- long %>% filter(Specieslist == species_name & name == location_name)
   print(species_data)
-  
-  species_name = "Acartia bifilosa"
-  location_name = "Koster"
   # use grep to get the row from the Coordinates df where location_name is present
   location_row_index <- grep(location_name, Coordinates$Observatory.ID)
   # save longitude and latitude for the row that you selected with grep
