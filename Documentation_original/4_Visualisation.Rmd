@@ -1,0 +1,57 @@
+---
+title: "Documentation_4_Visualisation"
+author: "Iris Van Paemel"
+date: "2024-05-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 4_Visualisation.R script
+
+### Input
+Read_Count_Species_ARMS.csv outputfile from the preparation script and DistanceOverSea.csv outputfile from New_main_script are loaded.
+
+### Output
+
+
+### script + descriptions
+
+
+```{r Visualisation, load libraries}
+#Load necessary packages
+pacman::p_load(dplyr, tidyverse, phyloseqGraphTest, rstatix, ggpubr, vegan, ggplot2)
+
+```
+
+
+```{r Visualisation, rarefaction curves}
+#Set wd to wherever all files are stored
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+#### Rarefaction curves ####
+#Plot rarefaction results
+Read_Count_Species_ARMS <- read.csv("Output/Read_Count_Species_ARMS.csv")
+OTU_Table_Rar <- Read_Count_Species_ARMS
+OTU_Table_Rar <- column_to_rownames(OTU_Table_Rar, "Specieslist") # turn around the dataframe
+OTU_Table_Rar <- as.matrix(t(OTU_Table_Rar)) # make a matrix out of the dataframe
+
+Rarefaction_df <- rarecurve(OTU_Table_Rar, step = 20,
+                            col = "blue", 
+                            cex = 0.6, tidy = T)
+ggplot(Rarefaction_df, aes(x = Sample, y = Species, group = Site)) +
+  geom_line(color = "blue", alpha = 0.5) + 
+  #geom_vline(xintercept = 100, linetype = "dashed", color = "black", alpha = 0.6, size = 0.6) +
+  theme_bw() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), breaks = seq(0, 80, 20)) +
+  scale_x_continuous(expand = c(0, 500)) +
+  ylab("Number of species") +
+  xlab("Number of sequences")
+### depicts whether the sampling depth was sufficient or not to estimate the diversity
+
+```
+
+
+
