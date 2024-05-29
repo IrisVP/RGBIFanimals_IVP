@@ -2,7 +2,8 @@
 ##################################################################################
 # This script is an alternative script for calculating sea distances and filtering
 # on alien species
-
+##################################################################################
+# OUTPUTS:
 # The DistanceOverSea.csv file is created in test_outputs/ directory instead of Output/
 # The Occurrence data files are created in OccurrenceData_test/ instead of OccurrenceData/
 ############################################################################################
@@ -28,8 +29,6 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 df <- read.csv("Output/RealFirst10_Species_Location.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
-# Read the species_location file
-Species_Location <- read.csv("Output/Species_Location.csv")
 
 ############################################################################################
 # CREATE A RASTERED WORLD
@@ -70,7 +69,7 @@ long <- pivot_longer(df, !Specieslist)
 long <- long[long$value > 0, ]
 
 ############################################################################################
-# REVISION: CALCULATE SEA DISTANCES
+# REVISION: CALCULATE DISTANCES
 ############################################################################################
 
 # Iterate over species_name and location_name
@@ -92,6 +91,10 @@ Calculation_seadistance <- function(species_name, species_location){
     res <- read.csv(occurrence_coord, header = TRUE)
   } else {
     res <- occ_data(scientificName = species_name, hasCoordinate = TRUE, limit = 10000)
+    
+    # here, we can split the occ_data function into subsets to get more than 100000 records
+    # retrieve data per category
+    
     res <- res$data[, c('decimalLongitude', 'decimalLatitude')]
     print(res)
     #rename the column names
@@ -132,7 +135,7 @@ Calculation_seadistance <- function(species_name, species_location){
   # save longitude and latitude for the row that you selected with grep
   longitude <- Coordinates[location_row_index, "Longitude"]
   latitude <- Coordinates[location_row_index, "Latitude"]
-  # make a dataframe out of the longitude and latitude and print as a check
+  # make a dataframe out of the longitude and latitude called samplelocation
   samplelocation <- data.frame(Longitude = longitude, Latitude = latitude)
   
   # Remove duplicate longitudes & latitudes  ==> from original function
@@ -145,8 +148,42 @@ Calculation_seadistance <- function(species_name, species_location){
   }
   
   # make matrices out of longitudes and latitudes of samplelocation and unique_file
+  # These are used in both flying distances and sea distances calculations
   sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
   uniquefile_matrix <- matrix(as.numeric(c(unique_file$Longitude, unique_file$Latitude)), ncol = 2)
+  
+  ##########################################################################
+  # FLYING DISTANCE CALCULATION
+  ##########################################################################
+  
+  flying_distances <- as.numeric(distm(samplelocation[,c("Longitude", "Latitude")], 
+                                unique_file[,c("Longitude", "Latitude")], 
+                                fun = distVincentyEllipsoid))
+  # 'fun =' this method is used for distances on earth (ellipsoid)
+  
+  # check if directory and/or csv files already exists with flying distances (files for each species/location)
+  flydistance_file <- paste0("test_outputs/fly_distances/", species_name, "_fly_distancesTo_", species_location)
+  
+  if(!dir.exists("test_outputs/fly_distances")){
+    dir.create("test_outputs/fly_distances")
+    
+    if(!file.exists(flydistance_file)){
+      write.table(flying_distances,file = flydistance_file)
+    } else {
+      warning(paste0(species_name, " and ", species_location, "flying distances file already written."))
+    }
+    
+  } else {
+    if(!file.exists(flydistance_file)){
+      write.table(flying_distances,file = flydistance_file)
+    } else {
+      warning(paste0(species_name, " and ", species_location, "flying distances file already written."))
+    }
+  }
+  
+  ##########################################################################
+  # SEA DISTANCE CALCULATION
+  ##########################################################################
   
   # sea_dist calculation and error catching
   sea_distances <- NA
@@ -154,12 +191,12 @@ Calculation_seadistance <- function(species_name, species_location){
     
     ### SEA_DIST ###
     
-  ########################################################################## FUNCTION PART
+  ########################################################################## ORIGINAL FUNCTION PART 
+    #(transformed to normal running script instead of function)
     ###################
     ### SHORTESTPATH
     ###################
     
-    #function(x, origin, goal, output)
     x <- tr
     origin <- sampleloc_matrix
     goal <- uniquefile_matrix
@@ -258,22 +295,22 @@ Calculation_seadistance <- function(species_name, species_location){
   }) # trycatch() closed
   
   # check if directory and/or csv files already exists with sea distances(files for each species/location)
-  distance_file <- paste0("test_outputs/distances/", species_name, "_distancesTo_", species_location)
+  distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
   
-  if(!dir.exists("test_outputs/distances")){
-    dir.create("test_outputs/distances")
+  if(!dir.exists("test_outputs/sea_distances")){
+    dir.create("test_outputs/sea_distances")
     
     if(!file.exists(distance_file)){
       write.table(sea_distances,file = distance_file)
     } else {
-      return(TRUE)
+      warning(paste0(species_name, " and ", species_location, "sea distances file already written."))
     }
     
   } else {
     if(!file.exists(distance_file)){
       write.table(sea_distances,file = distance_file)
     } else {
-      return(TRUE)
+      warning(paste0(species_name, " and ", species_location, "sea distances file already written."))
     }
   }
   
@@ -282,7 +319,7 @@ Calculation_seadistance <- function(species_name, species_location){
 
 error_messages <- c()
 
-result <- Map(Calculation_seadistance, long_filtered$Specieslist, long_filtered$name)
+result <- Map(Calculation_seadistance, long$Specieslist, long$name)
 
 # write error file
 if (length(error_messages) > 0) {
