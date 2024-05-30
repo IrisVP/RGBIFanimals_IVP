@@ -68,65 +68,124 @@ long <- pivot_longer(df, !Specieslist)
 # from tidyr package, reshape df from wide to long format
 long <- long[long$value > 0, ]
 
-############################################################################################
-# REVISION: CALCULATE DISTANCES
-############################################################################################
+#####################################################################################
+# FIRST CHECK IF FILE WITH OCCURRENCE DATA IN OCCURRENCEDATA DIRECTORY EXISTS
+# IF NOT: MAKE ONE AND GET DATA FROM GBIF
+# limit in occ_data() function is changeable for personal preference
+####################################################################################
 
-# Iterate over species_name and location_name
-Calculation_seadistance <- function(species_name, species_location){
-  
-  #####################################################################################
-  # FIRST CHECK IF FILE WITH OCCURRENCE DATA IN OCCURRENCEDATA DIRECTORY EXISTS
-  # IF NOT: MAKE ONE AND GET DATA FROM GBIF
-  # limit in occ_data() function is changeable for personal preference
-  ####################################################################################
-  
+for (species_name in unique(long$Specieslist)){
   print(paste0("species_name: ", species_name))
-  print(paste0("species_location: ", species_location))
-  
   # if file exists:        put content into variable res
   # if file doesn't exist: make one, get data, and put into variable res
-  occurrence_coord <- paste0("OccurrenceData_test/", species_name, ".csv")
+  occurrence_coord <- paste0("OccurrenceData_test_more/", species_name, ".csv")
   if (file.exists(occurrence_coord) == TRUE) {
     res <- read.csv(occurrence_coord, header = TRUE)
   } else {
-    res <- occ_data(scientificName = species_name, hasCoordinate = TRUE, limit = 10000)
+    res1 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Observation",
+    )
+    res2 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Machine observation",
+    )
+    res3 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Human observation",
+    )
+    res4 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Material sample",
+    )
+    res5 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Material citation",
+    )
+    res6 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Preserved specimen",
+    )
+    res7 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Fossil specimen",
+    )
+    res8 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Living specimen",
+    )
+    res9 <- occ_data(scientificName = species_name, 
+                     hasCoordinate = TRUE, 
+                     limit = 100000,
+                     basisOfRecord = "Occurrence",
+    )
+  
+    res1_coord <- res1$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res2_coord <- res2$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res3_coord <- res3$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res4_coord <- res4$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res5_coord <- res5$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res6_coord <- res6$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res7_coord <- res7$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res8_coord <- res8$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
+    res9_coord <- res9$data[, c('decimalLongitude', 'decimalLatitude', 'year', 'country')]
     
-    # here, we can split the occ_data function into subsets to get more than 100000 records
-    # retrieve data per category
+    res_total <- rbind(res1_coord, res2_coord, res3_coord, res4_coord, res5_coord, res6_coord,
+                       res7_coord, res8_coord, res9_coord)
     
-    res <- res$data[, c('decimalLongitude', 'decimalLatitude')]
-    print(res)
     #rename the column names
-    colnames(res) <- c('Longitude', 'Latitude')
+    colnames(res_total) <- c('Longitude', 'Latitude')
     # Remove occurrences where longitude or latitude is NA
-    res <- res[!is.na(res$Latitude) & !is.na(res$Longitude),]
+    res_total <- res_total[!is.na(res_total$Latitude) & !is.na(res_total$Longitude),]
     # check if there's no information for a species
-    if (nrow(res) == 0) {
-      error_message <- paste0("No information found on GBIF for ", species_name, " in ", species_location)
+    if (nrow(res_total) == 0) {
+      error_message <- paste0("No information found on GBIF for ", species_name)
       
       # check if directory with error messages exists, if it doesn't: make one
       if (!dir.exists("test_outputs/errors")){
         dir.create("test_outputs/errors", recursive = TRUE)
-        error_file_name <- paste0("test_outputs/errors/error_", species_name, "_", species_location, ".csv")
+        error_file_name <- paste0("test_outputs/errors/error_", species_name, ".csv")
         # error files written to test_outputs/errors/
         write.csv(error_message, file = error_file_name)
         return(FALSE)
-        
+      
         # write error file to the directory
       } else {
-        error_file_name <- paste0("test_outputs/errors/error_", species_name, "_", species_location, ".csv")
+        error_file_name <- paste0("test_outputs/errors/error_", species_name, ".csv")
         # error files written to test_outputs/errors/
         write.csv(error_message, file = error_file_name)
         return(FALSE)
-        }
+      }
     }
-    
-    write.csv(res, occurrence_coord)
-  
-  }
-  OccurrenceData <- res
+    }
+    print("file has successfully been written")
+    write.csv(res_total, occurrence_coord)
+}
 
+############################################################################################
+# REVISION: CALCULATE DISTANCES
+############################################################################################
+
+species_name <- "Acartia bifilosa"
+species_location <- "Koster"
+
+# Iterate over species_name and location_name
+Calculation_seadistance <- function(species_name, species_location){
+  
+  print(paste0("species_name: ", species_name))
+  print(paste0("species_location: ", species_location))
+  
+  occurrence_coord <- paste0("OccurrenceData_test_more/", species_name, ".csv")
+  OccurrenceData <- read.csv(occurrence_coord, header = TRUE)
+  
   # getting coordinates from Coordinates dataframe to get longitude and latitude for ARMS location
   ################################################################################################
   
@@ -162,10 +221,10 @@ Calculation_seadistance <- function(species_name, species_location){
   # 'fun =' this method is used for distances on earth (ellipsoid)
   
   # check if directory and/or csv files already exists with flying distances (files for each species/location)
-  flydistance_file <- paste0("test_outputs/fly_distances/", species_name, "_fly_distancesTo_", species_location)
+  flydistance_file <- paste0("test_outputs/fly_distances_more/", species_name, "_fly_distancesTo_", species_location)
   
-  if(!dir.exists("test_outputs/fly_distances")){
-    dir.create("test_outputs/fly_distances")
+  if(!dir.exists("test_outputs/fly_distances_more")){
+    dir.create("test_outputs/fly_distances_more")
     
     if(!file.exists(flydistance_file)){
       write.table(flying_distances,file = flydistance_file)
@@ -295,23 +354,14 @@ Calculation_seadistance <- function(species_name, species_location){
   }) # trycatch() closed
   
   # check if directory and/or csv files already exists with sea distances(files for each species/location)
-  distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
+  distance_file <- paste0("test_outputs/sea_distances_more/", species_name, "_distancesTo_", species_location)
   
-  if(!dir.exists("test_outputs/sea_distances")){
-    dir.create("test_outputs/sea_distances")
-    
-    if(!file.exists(distance_file)){
-      write.table(sea_distances,file = distance_file)
-    } else {
-      warning(paste0(species_name, " and ", species_location, "sea distances file already written."))
-    }
+  if(!dir.exists("test_outputs/sea_distances_more")){
+    dir.create("test_outputs/sea_distances_more")
+    write.table(sea_distances,file = distance_file)
     
   } else {
-    if(!file.exists(distance_file)){
-      write.table(sea_distances,file = distance_file)
-    } else {
-      warning(paste0(species_name, " and ", species_location, "sea distances file already written."))
-    }
+    write.table(sea_distances,file = distance_file)
   }
   
   return(sea_distances)
