@@ -26,7 +26,7 @@ library("FRK")
 # Set working directory to directory where the R-script is saved
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 # Read a species list
-df <- read.csv("Output/RealFirst10_Species_Location.csv")
+df <- read.csv("Output/next20_Species_Location.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
 
@@ -233,20 +233,21 @@ Calculation_seadistance <- function(species_name, species_location){
   # 'fun =' this method is used for distances on earth (ellipsoid)
   
   # check if directory and/or csv files already exists with flying distances (files for each species/location)
-  flydistance_file <- paste0("test_outputs/fly_distances_more/", species_name, "_fly_distancesTo_", species_location)
+  flydistance_file <- paste0("test_outputs/fly_distances/", species_name, "_fly_distancesTo_", species_location)
+  content_file2 <- cbind(flying_distances, unique_file$year, unique_file$month, unique_file$country)
+  colnames(content_file2) <- c("x", "year", "month", "country")
   
-  if(!dir.exists("test_outputs/fly_distances_more")){
-    dir.create("test_outputs/fly_distances_more")
+  if(!dir.exists("test_outputs/fly_distances")){
+    dir.create("test_outputs/fly_distances")
     
     if(!file.exists(flydistance_file)){
-      write.table(flying_distances,file = flydistance_file)
+      write.table(content_file2, file = flydistance_file)
     } else {
       warning(paste0(species_name, " and ", species_location, "flying distances file already written."))
     }
-    
   } else {
     if(!file.exists(flydistance_file)){
-      write.table(flying_distances,file = flydistance_file)
+      write.table(content_file2,file = flydistance_file)
     } else {
       warning(paste0(species_name, " and ", species_location, "flying distances file already written."))
     }
@@ -367,13 +368,15 @@ Calculation_seadistance <- function(species_name, species_location){
   
   # check if directory and/or csv files already exists with sea distances(files for each species/location)
   distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
+  content_file <- cbind(sea_distances, unique_file$year, unique_file$month, unique_file$country)
+  colnames(content_file) <- c("x", "year", "month", "country")
   
   if(!dir.exists("test_outputs/sea_distances")){
     dir.create("test_outputs/sea_distances")
-    write.table(sea_distances,file = distance_file)
-    
+    write.table(content_file, file = distance_file)
+    colnames(content_file)
   } else {
-    write.table(sea_distances,file = distance_file)
+    write.table(content_file, file = distance_file)
   }
   
   return(sea_distances)
