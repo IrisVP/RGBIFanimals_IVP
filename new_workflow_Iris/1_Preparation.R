@@ -176,7 +176,10 @@ write.csv(Species_Location, "Species_Location.csv", row.names = F)
 
 #Export Coordinates, which are used in 3_Main_script and MetaData, which is used in 4_Visualisation
 setwd(dir)
-Coordinates <- MetaData %>% group_by(Observatory.ID) %>% dplyr::select(Observatory.ID, Longitude, Latitude) %>% slice_min(Longitude) %>% unique
+Coordinates <- MetaData %>% 
+  group_by(Observatory.ID) %>% 
+  dplyr::select(Observatory.ID, Longitude, Latitude) %>% 
+  slice_min(Longitude) %>% unique
 write.csv(Coordinates, "Inputs/Coordinates.csv", row.names = F)
 write.csv(MetaData, "Inputs/MetaData_Adjusted.csv", row.names = F)
 
