@@ -262,23 +262,30 @@ Calculation_seadistance <- function(species_name, species_location){
   ##########################################################################
   # SEA DISTANCE CALCULATION
   ##########################################################################
+
+  # Initialize an empty dataframe to store the results
+  sea_distances <- data.frame(Sea_Distance = numeric())
+  sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Latitude, samplelocation$Longitude)), ncol = 2)
+  print(sampleloc_matrix)
   
-  # Convert point1 to radians
-  point1_rad <- cbind(samplelocation$Longitude * pi / 180, samplelocation$Latitude * pi / 180)
+  # Loop through each row of the OccurrenceData_new dataframe
+  for (i in 1:nrow(OccurrenceData)) {
+    # Convert samplelocation and occurrence data to matrices
+    
+    occurrencedata_matrix <- matrix(as.numeric(c(OccurrenceData[i, ]$Latitude, OccurrenceData[i, ]$Longitude)), ncol = 2)
+    print(occurrencedata_matrix)
+    # Calculate the shortest path
+    path <- shortestPath(tr, sampleloc_matrix, occurrencedata_matrix, output = "SpatialLines")
+    print(path)
+    # Calculate the distance of the path
+    distance <- sum(sp::SpatialLinesLengths(path))
+    
+    # Append the results to the dataframe
+    sea_distances <- rbind(sea_distances, data.frame(Sea_Distance = distance))
+  }
   
-  # Calculate sea distances
-  distances_sea <- apply(OccurrenceData, 1, function(row) {
-    #print(paste0("longitude occurrence: ", as.numeric(row['Longitude']),"latitude occurrence: ", as.numeric(row['Latitude'])))
-    print(paste0("point1_rad", point1_rad[1,]))
-    point2_rad <- cbind(as.numeric(row['Longitude']) * pi / 180, as.numeric(row['Latitude']) * pi / 180)
-    print(paste0("point2_rad", point2_rad[1,]))
-    geodDist(point1_rad[1,], point2_rad[1,])
-  })
-  
-  # Print sea distances
-  print("Sea distances (kilometers):")
-  print(distances_sea)
-  
+  # View the resulting dataframe
+  print(sea_distances)
   
   # check if directory and/or csv files already exists with sea distances(files for each species/location)
   distance_file <- paste0("theoretical_data/sea_distances/", species_name, "_distancesTo_", species_location)
