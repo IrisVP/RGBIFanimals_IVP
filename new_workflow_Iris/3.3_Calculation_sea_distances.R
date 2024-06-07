@@ -17,8 +17,15 @@ library("ggplot2")
 library("tidyr")
 library("worrms")
 library("sf")
+library("sp")
+library("rgdal")
+library("raster")
+library("rnaturalearth")
+library("rnaturalearthdata")
 library("maps")
+library("maptools")
 library("FRK")
+
 
 ############################################################################################
 # LOAD DATA
@@ -26,39 +33,10 @@ library("FRK")
 # Set working directory to directory where the R-script is saved
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 # Read a species list
-df <- read.csv("theoretical_data/OccurrenceData_toKoster/alien_species.csv")
+df <- read.csv("Output/RealFirst10_Species_Location.csv")
 # Read coordinates file
 Coordinates <- read.csv("Inputs/Coordinates.csv")
 
-############################################################################################
-# CREATE A RASTERED WORLD
-############################################################################################
-
-# if the file is already made, it will load the file and return it
-if(file.exists("Inputs/new_tr.rdata")){
-  load("Inputs/new_tr.rdata")
-} else{
-  # Load a map
-  wrld_simpl2 <- map_data("world") # comes from ggplot2
-  wrld_simpl <- df_to_SpatialPolygons(df = wrld_simpl2,
-                                      keys = "region",
-                                      coords = c("long", "lat"),
-                                      proj = CRS("+proj=longlat +ellps=sphere"))
-  # data(wrld_simpl)
-  # Generate a scaffold for the raster file
-  world_crs <- crs(wrld_simpl)
-  worldshp <- spTransform(wrld_simpl, world_crs)
-  ras <- raster(nrow=1200, ncol=1200)
-  
-  # Generate a raster file
-  worldmask <- rasterize(worldshp, ras)
-  worldras <- is.na(worldmask) # inverse water and land, so ocean becomes 1 and land 0
-  worldras[worldras==0] <- 999 # set land to 999
-  
-  # Create a Transition object from the raster
-  tr <- transition(worldras, function(x) 1/mean(x), 16)
-  tr = geoCorrection(tr, scl=FALSE)
-}
 
 ############################################################################################
 # RESHAPE DF WITH LOCATIONS AND SPECIES FROM WIDE TO LONG FORMAT
@@ -185,8 +163,8 @@ for (species_name in unique(long$Specieslist)){
 # REVISION: CALCULATE DISTANCES
 ############################################################################################
 # practice species
-species_name <- "Acartia bifilosa"
-species_location <- "Koster"
+#species_name <- "Acartia bifilosa"
+#species_location <- "Koster"
 
 # Iterate over species_name and location_name
 Calculation_seadistance <- function(species_name, species_location){
@@ -194,7 +172,7 @@ Calculation_seadistance <- function(species_name, species_location){
   print(paste0("species_name: ", species_name))
   print(paste0("species_location: ", species_location))
   
-  occurrence_coord <- paste0("theoretical_data/OccurrenceData_toKoster/alien_species.csv")
+  occurrence_coord <- paste0("OccurrenceData_test/", species_name, ".csv")
   OccurrenceData <- read.csv(occurrence_coord, header = TRUE)
   
   # getting coordinates from Coordinates dataframe to get longitude and latitude for ARMS location
@@ -206,156 +184,112 @@ Calculation_seadistance <- function(species_name, species_location){
   longitude <- Coordinates[location_row_index, "Longitude"]
   latitude <- Coordinates[location_row_index, "Latitude"]
   # make a dataframe out of the longitude and latitude called samplelocation
-  samplelocation <- data.frame(Longitude = longitude, Latitude = latitude)
+  samplelocation <- data.frame(Latitude = latitude, Longitude = longitude)
   
   # check if OccurrenceData has coordinates
   if(nrow(OccurrenceData) < 1) {
     stop("OccurrenceData has no coordinates (line 139)")
   }
   
-  # make matrices out of longitudes and latitudes of samplelocation and OccurrenceData
-  # These are used in both flying distances and sea distances calculations
-  sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
-  uniquefile_matrix <- matrix(as.numeric(c(OccurrenceData$Longitude, OccurrenceData$Latitude)), ncol = 2)
-  
   ##########################################################################
-  # FLYING DISTANCE CALCULATION
+  # DISTANCES CALCULATION
   ##########################################################################
+
+  # Load world data
+  world <- ne_countries(scale = "medium", returnclass = "sf")
+  r <- raster(extent(-180, 180, -90, 90), res = 0.1)
+  r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE)
+  costs <- reclassify(r, cbind(1, Inf))
+  costs[is.na(costs)] <- 1  # Set water cells to a low cost (e.g., 1)
   
-  # extract the single set of coordinates
-  point1 <- c(samplelocation$Longitude, samplelocation$Latitude)
-  print(point1)
-  # calculate distances
-  flying_distances <- apply(OccurrenceData, 1, function(row) {
-    point2 <- c(as.numeric(row["Longitude"]), as.numeric(row['Latitude']))
-    distVincentySphere(point1, point2)
-  })
+  # for loop to iterate over OccurrenceData
+  # start a sea_distances and flying_distances list
+  sea_distances <- c()
+  flying_distances <- c()
   
-  # check if directory and/or csv files already exists with flying distances (files for each species/location)
-  flydistance_file <- paste0("theoretical_data/", species_name, "_fly_distancesTo_", species_location)
-  content_file2 <- cbind(flying_distances, OccurrenceData$year, OccurrenceData$month, OccurrenceData$country)
-  colnames(content_file2) <- c("x", "year", "month", "country")
+  for (row in 1:nrow(OccurrenceData)) {
+    print(paste0("Calculating longitude: ", OccurrenceData[row, 3], " and latitude: ", OccurrenceData[row, 2]))
+    print(paste0("for samplelocation: ", samplelocation[,1], " ", samplelocation[,2]))
+    
+    # Define points using correct projection
+    point1 <- SpatialPoints(cbind(samplelocation$Longitude, samplelocation$Latitude), proj4string = CRS(proj4string(r)))
+    point2 <- SpatialPoints(cbind(OccurrenceData[row, 3], OccurrenceData[row, 2]), proj4string = CRS(proj4string(r)))
   
-  if(!dir.exists("theoretical_data/")){
-    dir.create("theoretical_data/")
-    write.table(content_file2, file = flydistance_file)
-  } else {
-    write.table(content_file2,file = flydistance_file)
+    #####################
+    ## FLYING DISTANCE ##
+    #####################
+  
+    # Calculate the straight-line distance (accounting for the Earth's curvature)
+    straight_line_distance <- distHaversine(coordinates(point1), coordinates(point2))
+    print(paste("Straight line distance:", straight_line_distance, "meters"))
+    
+    flying_distances <- append(flying_distances, straight_line_distance)
+  
+    #################
+    ## SEA DISTANCE##
+    #################
+  
+    transition_matrix <- "transitMatrix.rds"
+    if (!file.exists(transition_matrix)) {
+      # Create a transition object for adjacent cells
+      transitMatrix <- transition(costs, transitionFunction = function(x) 1/mean(x), directions = 16)
+      # Set infinite costs to NA to prevent travel through these cells
+      transitMatrix <- geoCorrection(transitMatrix, scl = TRUE)
+      # Save/Load transition matrix (this should be the same for all calculations)
+      saveRDS(transitMatrix, file = "transitMatrix.rds")
+      
+    } else {
+      transitMatrix <- readRDS(file = "transitMatrix.rds")
+    }
+    
+    # Coerce points to SpatialPointsDataFrame for compatibility with gdistance
+    point1_df <- SpatialPointsDataFrame(coords = point1, data = data.frame(id = 1), proj4string = CRS(proj4string(r)))
+    point2_df <- SpatialPointsDataFrame(coords = point2, data = data.frame(id = 2), proj4string = CRS(proj4string(r)))
+  
+    # Compute cost distance
+    cost_distance <- costDistance(transitMatrix, point1_df, point2_df)
+  
+    # Calculate the shortest path
+    shortest_path <- shortestPath(transitMatrix, point1_df, point2_df, output = "SpatialLines")
+  
+    # Plotting the shortest path and the world map
+    #plot(r, main = "Shortest Water Path")
+    #plot(world, add = TRUE, col = "grey")
+    #plot(shortest_path, add = TRUE, col = "blue", lwd = 2)
+    #points(point1_df, col = "red", pch = 20)
+    #points(point2_df, col = "green", pch = 20)
+  
+    # Assuming 'shortest_path' is your SpatialLines object from the shortestPath function
+    # First, ensure the CRS is set on the original SpatialLines object
+    crs_info <- proj4string(shortest_path)  # or use crs(shortest_path) if using `sp`
+  
+    # If it's not set, set it here, assuming the original data was in WGS 84 (EPSG:4326)
+    if (is.na(crs_info)) {
+      proj4string(shortest_path) <- CRS("+init=epsg:4326")  # Set to WGS 84
+    }
+  
+    # Convert SpatialLines to sf object
+    shortest_path_sf <- st_as_sf(shortest_path)
+  
+    # Confirm CRS is set for sf object, if not, set it:
+    if (is.na(st_crs(shortest_path_sf))) {
+      st_crs(shortest_path_sf) <- 4326  # EPSG code for WGS 84
+    }
+  
+    # Transform to a suitable projected CRS for distance calculation (e.g., UTM zone 33N)
+    shortest_path_utm <- st_transform(shortest_path_sf, 32633)  # UTM zone 33N
+  
+    # Calculate the length in meters
+    path_length <- st_length(shortest_path_utm)
+  
+    # Print the length
+    print(paste0("distance through sea: ", path_length))
+    sea_distances <- append(sea_distances, path_length)
   }
   
-  ##########################################################################
-  # SEA DISTANCE CALCULATION
-  ##########################################################################
-  
-  # sea_dist calculation and error catching
-  sea_distances <- NA
-  result <- tryCatch({
-    
-    ### SEA_DIST ###
-    
-  ########################################################################## ORIGINAL FUNCTION PART 
-    #(transformed to normal running script instead of function)
-    ###################
-    ### SHORTESTPATH
-    ###################
-    
-    x <- tr
-    origin <- sampleloc_matrix
-    goal <- uniquefile_matrix
-    output <- "SpatialLines"
-    
-    originCells <- raster::cellFromXY(x, origin)
-    goalCells <- raster::cellFromXY(x, goal)
-    indexOrigin <- originCells
-    indexGoal <- goalCells
-    y <- transitionMatrix(x)
-    if(isSymmetric(y)) {
-      mode <- "undirected"
-    }else{
-      mode <- "directed"
-    }
-    
-    adjacencyGraph <- igraph::graph_from_adjacency_matrix(y, mode=mode, weighted=TRUE)
-    E(adjacencyGraph)$weight <- 1/E(adjacencyGraph)$weight
-    
-    shortestPaths <- shortest_paths(adjacencyGraph,
-                                    indexOrigin, indexGoal)$vpath
-    if(output=="SpatialLines")
-    {
-      linesList <- vector(mode="list", length=length(shortestPaths))
-      
-      for(i in 1:length(shortestPaths))
-      {
-        sPVector <- shortestPaths[[i]]
-        coords <- raster::xyFromCell(x, sPVector)
-        linesList[[i]] <- Line(coords)
-      }
-      
-      # Suggested by Sergei Petrov
-      LinesObject <- mapply(Lines,
-                            slinelist = linesList,
-                            ID = as.character(1:length(shortestPaths)),
-                            SIMPLIFY = FALSE)
-      
-      result <- sp::SpatialLines(LinesObject, proj4string = sp::CRS(projection(x)))
-    }
-    
-    ################
-    ### LENGTHLINE
-    ################
-    
-    library(sp)
-    library(raster)
-    
-    line <- result
-    
-    if (inherits(line, 'SpatialPolygons')) {
-      requireNamespace('raster')
-      line <- raster::geom(methods::as(line, 'SpatialLines'))
-    } else if (inherits(line, 'SpatialLines')) {
-      requireNamespace('raster')
-      line <- raster::geom(line)
-    } else {
-      line <- cbind(object=1, part=1, cump=1, line[, 1:2])
-      colnames(line)[4:5] <- c('x', 'y')
-    }
-    
-    ids <- unique(line[,1])
-    len <- rep(0, length(ids))
-    
-    for (i in 1:length(ids)) {
-      d <- line[line[,1] == ids[i], , drop = FALSE]
-      
-      parts <- unique(d[,2])
-      
-      for (p in parts) {
-        dd <- d[d[,2] == p, ,drop=FALSE]
-        
-        if(nrow(dd) < 2) {
-          warning("Not enough points to calculate distance for part ", p, " of object ", ids[i])
-          next
-        }
-        
-        for (j in 1:(nrow(dd)-1)) {
-          len[i] <- len[i] + distGeo(dd[j, c('x', 'y'), drop=FALSE], dd[j+1, c('x', 'y'), drop=FALSE])
-        }
-      }
-    }
-    sea_distances <- len
-  ############################################################################ END FUNCTION PART
-    
-    }, error = function(e) {
-      error_message <- paste0("An error occurred during calculation of sea_dist for ", species_name, " in ", species_location)
-      cat(error_message, "\n")  
-      
-      # Collect the error message
-      error_messages <<- append(error_messages, list(error_message))
-      
-      # Return FALSE to indicate that this iteration should be skipped
-      return(FALSE)
-      
-  }) # trycatch() closed
-  
+  print(paste0("sea_distances: ", sea_distances))
+  print(paste0("flying distances: ", flying_distances))
+}
   # check if directory and/or csv files already exists with sea distances(files for each species/location)
   distance_file <- paste0("theoretical_data/sea_distances/", species_name, "_distancesTo_", species_location)
   content_file <- cbind(sea_distances, OccurrenceData$year, OccurrenceData$month, OccurrenceData$country)
@@ -373,31 +307,31 @@ Calculation_seadistance <- function(species_name, species_location){
   # CALCULATE SHORTEST SEA DISTANCE
   ###########################################################
   
-  shortest_fly_distance <- min(flying_distances, na.rm = TRUE)
-  print(shortest_fly_distance)
-  shortest_sea_distance <- min(sea_distances, na.rm = TRUE)
-  print(shortest_sea_distance)
+  #shortest_fly_distance <- min(flying_distances, na.rm = TRUE)
+  #print(shortest_fly_distance)
+  #shortest_sea_distance <- min(sea_distances, na.rm = TRUE)
+  #print(shortest_sea_distance)
   
   # make a list of all shortest distances per species/location
-  content_shortest <- data.frame(species_name = species_name,
-                                 species_location = species_location,
-                                 shortest_sea_distance = shortest_sea_distance,
-                                 shortest_fly_distance = shortest_fly_distance)
+  #content_shortest <- data.frame(species_name = species_name,
+  #                               species_location = species_location,
+  #                               shortest_sea_distance = shortest_sea_distance,
+  #                               shortest_fly_distance = shortest_fly_distance)
   
-  shortest_distances <- append(shortest_distances, content_shortest)
-  return(shortest_distances)
+  #shortest_distances <- append(shortest_distances, content_shortest)
+  #return(shortest_distances)
 
 }
 
 error_messages <- c()
 
 # start a list to save shortest distances in
-colnames <- c("species_name", "species_location", "shortest_sea_distance", "shortest_fly_distance")
-shortest_distances <- data.frame(matrix(ncol = length(colnames), nrow = 0))
-colnames(shortest_distances) <- colnames
+#colnames <- c("species_name", "species_location", "shortest_sea_distance", "shortest_fly_distance")
+#shortest_distances <- data.frame(matrix(ncol = length(colnames), nrow = 0))
+#colnames(shortest_distances) <- colnames
 
 result <- Map(Calculation_seadistance, long$Specieslist, long$name)
-shortest_distances <- result
+#shortest_distances <- result
 
 # write error file
 if (length(error_messages) > 0) {
