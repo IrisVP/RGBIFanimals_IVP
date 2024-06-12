@@ -198,14 +198,13 @@ process_species_location <- function(species_name, location_name) {
   if (file.exists(filename_occ) == TRUE) {
     res <- read.csv(filename_occ, header = TRUE)
   } else {
-    res <- occ_data(scientificName = species_name, hasCoordinate = TRUE, limit = 100000) #changed limit, was 200000
+    res <- occ_data(scientificName = species_name, hasCoordinate = TRUE, limit = 100000) # set limit to preference (but < 200000)
     res <- res$data[, c('decimalLongitude', 'decimalLatitude')]
-    print(res)
     #rename the column names
     colnames(res) <- c('Longitude', 'Latitude')
     # Remove occurrences where longitude or latitude is NA
     res <- res[!is.na(res$Latitude) & !is.na(res$Longitude),]
-    # try(res <- get_occurrence_data(check_official_name(species)))
+    
     if (nrow(res) == 0) stop("No information found for this species")
     write.csv(res, filename_occ)
       
@@ -273,7 +272,7 @@ process_species_location <- function(species_name, location_name) {
     #### Line above in comments has been replaced by ShortestPath and lengthLine functions original code
     #### Below you find ShortestPath function first and after that lengthLine
     #### This is an important adjustment, because when using the original line,
-    #### There were too many errors. Some debug prints have been put in comments here
+    #### There were too many errors.
     
     ###################
     ### SHORTESTPATH
@@ -409,7 +408,6 @@ process_species_location <- function(species_name, location_name) {
   # Filter if there are more than 10 unique locations
   #########################################################
   if(nrow(OccurrenceData_new) > 10){
-    print("start calculating distances (bird)... should be shorter than sea_dist...")
     # pmax helps you get the biggest number from each pair of spots in your lists
     OccurrenceData_new$distance <- pmax(abs(OccurrenceData_new$Longitude - samplelocation$Longitude), 
                                         abs(OccurrenceData_new$Latitude - samplelocation$Latitude))
@@ -425,7 +423,6 @@ process_species_location <- function(species_name, location_name) {
   # Save the number of points for which the distance will be calculated
   species_data$pointscalculated <- nrow(OccurrenceData_new)
   # find the shortest route to every point through the sea
-  print("start calculating distances through sea (shortest)...")
   paths <- sapply(1:nrow(OccurrenceData_new), function(i) {
     sampleloc_matrix <- matrix(as.numeric(c(samplelocation$Longitude, samplelocation$Latitude)), ncol = 2)
     occurrencedata_matrix <- matrix(as.numeric(c(OccurrenceData_new[i,]$Longitude, OccurrenceData_new[i,]$Latitude)), ncol = 2)
@@ -460,6 +457,6 @@ rm(list = ls())
 
 #### Additional, optional, cleaning step ####
 
-results <- read.csv("Output/DistanceOverSea_realData.csv")
+results <- read.csv("Output/DistanceOverSea.csv")
 results <- results[!is.na(results$distance),]
-write.csv(results, "Output/DistanceOverSea_realData.csv", quote = F, row.names = F)
+write.csv(results, "Output/DistanceOverSea.csv", quote = F, row.names = F)
