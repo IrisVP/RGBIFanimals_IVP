@@ -20,10 +20,13 @@ The focus of this workflow is the detection of marine alien species or Non-Indig
 The most important step in this pipeline is fetching occurrence data from the Global Biodiversity Information Facility (GBIF) website/database and calculating distances with samplelocations from ARMS. This step is performed in the [new main script] and this is computationally very expensive, this step takes hours relative to the amount of data being analysed.
 
 ## 1_Preparation.R script
+
+WARNING: This script focuses on outputfiles from the BOLDigger pipeline. Make sure to check this script before running. Some ARMS locations and taxonomy are hardcoded. The headers in the BOLDigger file consist of sample names that are not consistent and sometimes have year only or full dates. Some of them have ARMS fraction names (MF100, MF500, SF40).
+
 ### Input
 The input data consists of csv files (these csv files are saved in the directory Inputs/ which is located in the same directory as the scripts are in):
 
-- BOLDigger_output.csv => Header consists of sequence, Phylum, Class, Order, Family, Genus, Species, Similarity and all ARMS filenames in format: [format]
+- BOLDigger_output.csv => Header consists of sequence, Phylum, Class, Order, Family, Genus, Species, Similarity and all ARMS filenames.
 - MetaData.csv => Header consists of Sample_region_country, Country, Observartory-ID, ARMS-ID, Latitude, Longitude, Depth_m, Monitoring_area, Deployment_date, Retrieval_date, Days_deployed, Fraction and Filename
 Filename is also present in the BOLDigger output as columnnames.
 - Synonyms.csv => Header consists of Old_name and New_name
@@ -34,9 +37,9 @@ For the output of this script, a new directory "Output" is made. All of the csv 
 
 - UniqueSpecies.csv => Header consists of Specieslist and Similarity
 - ASV_Count.csv => Header consists of Specieslist and 'n' (n = count ASV)
-- Read_Count_ASVs_ARMS.csv => Header consists of sequence, Phylum, Class, Order, Family, Genus, Species, Specieslist, Similarity and ARMS filenames in format: [format] without 'MF100', 'MF500' or 'SF40' (fractions)
+- Read_Count_ASVs_ARMS.csv => Header consists of sequence, Phylum, Class, Order, Family, Genus, Species, Specieslist, Similarity and ARMS filenames in format: [Location].JJ.CD78.[dates].[ARMS fraction] without 'MF100', 'MF500' or 'SF40' (fractions)
 - Read_Count_Species_ARMS.csv => Header consists of Specieslist and ARMS filenames
-- Read_Count_Species_Loc_Year.csv => Header consists of Phylum, Class, Order, Family, Specieslist and ARMS filenames in format: [format]
+- Read_Count_Species_Loc_Year.csv => Header consists of Phylum, Class, Order, Family, Specieslist and ARMS filenames
 - Read_Count_Species_Fraction.csv => Header consists of Specieslist and ARMS filenames with fractions.
 - Data_LOI.csv => Header consists of sequence, Phylum, Class, Order, Family, Genus, Species, Specieslist, Similarity
 - Species_Location.csv => Header consists of Specieslist, BelgianCoast, Getxo, Koster, Laeso, Limfjord, Plymouth, Roscoff, SwedishWestCoast, TZS, Vigo
@@ -72,6 +75,7 @@ FILTERING STEP (line 16 in 1_Preparation script)
 - save the column names from Data in the variable 'Locations_BOLD'
 - split the column names and place them in a dataframe
 - save the ARMS-MBON location names in variable 'LOI'
+/!\ Replace with your own data
 - Filter Locations_BOLD V1 column to locations that are present in LOI
 - Locations_BOLD$V3 is made by pasting columns V1 and V2 together separated by a '.'
 
@@ -102,9 +106,10 @@ METADATA STEP (line 32 in 1_Preparation script)
 - remove V1 and V2 from MetaData and values that start with 'X'
 - replacing blank values with 'NA' and remove NA values
 - remove rows with missing values using complete.cases() function
-- make a new column MetaData$Year with only the years from MetaData$Deployment_date
+- make a new column MetaData\$Year with only the years from MetaData\$Deployment_date
 - add another column 'Location_Year' with Observatory.ID and Year split by '_'
 - add another column 'No_Fraction' with filenames without ARMS fraction in it
+/!\ Replace with your own data
 
 ```{r Preparation, metadata step}
 
@@ -135,15 +140,17 @@ MetaData$No_Fraction <- sub("\\.MT.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.SF40", "", MetaData$No_Fraction)
 
 ```
-METADATA CONTINUED line 54 in 1_Preparation script
+METADATA CONTINUED (line 54 in 1_Preparation script)
 
 - Make a variable with taxonomy
 - Merge the genus and species together into specieslist, seperated by a space
 - replace , with . in Data$Similarity
 - substitute species names with synonyms using the synonyms.csv
+/!\ Replace with your own data
 - First it selects in Data\$Specieslist the old names that are present in Synonyms\$Old_name and if there's a match, it replaces it with the new name
 - Data_LOI is the filtered version of Data with "sequence", Taxonomy variable, "Specieslist", "Similarity" and MetaData\$Filename variable
 - contaminants, groups that are not of interest and sequences without observations are removed
+/!\ Replace with your own data
 - reset row numbers
 
 ```{r}
@@ -182,7 +189,7 @@ rm(RemovePhyla, RemoveSpecies)
 
 ```
 
-SET OF ADDITIONAL DATAFRAMES FOR ADDITIONAL INSIGHT line 89 in 1_Preparation script
+SET OF ADDITIONAL DATAFRAMES FOR ADDITIONAL INSIGHT (line 89 in 1_Preparation script)
 
 - Extract unique species with their corresponding lowest similarity
 	- select species & similarity from Data_LOI
