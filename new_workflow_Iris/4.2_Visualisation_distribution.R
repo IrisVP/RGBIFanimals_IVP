@@ -12,7 +12,7 @@ library("poliscidata")
 # Set working directory to directory where the R-script is saved
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 # first load in species_location file
-species_location <- read.csv("Output/next20_Species_Location.csv")
+species_location <- read.csv("Output/1_Species_Location.csv")
 long <- pivot_longer(species_location, !Specieslist)
 # from tidyr package, reshape df from wide to long format
 long <- long[long$value > 0, ]
@@ -22,22 +22,20 @@ long <- long[long$value > 0, ]
 # iterate over species_location file again using function and map()
 # and read csv file per species
 
-########################## FUNCTION
-
 species_name <- "Acartia bifilosa"
-species_location <- "Roscoff"
+species_location <- "Koster"
 
 Distribution_seadistance <- function(species_name, species_location){
   # read csv file per species
   print(paste0("species_name: ", species_name))
   print(paste0("species_location: ", species_location))
-  distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
+  distance_file <- paste0("theoretical_data/sea_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
   
   distances <- read.table(distance_file, header = TRUE)
+  # clean dataframe from rows with Inf in them
+  distances <- distances[is.finite(distances$x), ]
   distances$x <- distances$x/1000
-  #print(summary(distances))
   distances <- subset(distances, x < 40000)
-  #print(summary(distances))
   
   ###############################################################################
   # make histograms of distances per species, with filtering on distance limit 40000
@@ -57,7 +55,7 @@ Distribution_seadistance <- function(species_name, species_location){
     scale_y_continuous(expand = c(0, 0)) +
     coord_cartesian(xlim = c(0, 3000)) # Use coord_cartesian for setting limits
     
-  #print(dist_plot)
+  print(dist_plot)
   # create a directory to save the plots in
   
   if(!dir.exists("test_outputs/sea_distribution_plots")) {
@@ -72,19 +70,18 @@ Distribution_seadistance <- function(species_name, species_location){
 ################################# END FUNCTION
 
 # error lists initiations to store error messages in
-error_10000 <- c()
+error <- c()
 
 # executing iteration for the long file!
 plot <- Map(Distribution_seadistance, long$Specieslist, long$name)
 
 # write error files
-print(error_1000)
+print(error)
 
-if(!exists("test_outputs/errors_lessthan", lim)) {
-  file_error <- paste0("test_outputs/errors_lessthan", lim)
-  write.table(error_10000, file = file_error, append = TRUE, quote = FALSE, 
-              col.names = FALSE, row.names = FALSE)
-}
+file_error <- paste0("test_outputs/errors_graph_sea_distances.csv",)
+write.table(error, file = file_error, append = TRUE, quote = FALSE, 
+            col.names = FALSE, row.names = FALSE)
+
 
 
 #############################################################
@@ -94,11 +91,15 @@ species_name <- "Acartia bifilosa"
 species_location <- "Koster"
 
 Distribution_combDistance <- function(species_name, species_location){
-  sea_distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
-  fly_distance_file <- paste0("test_outputs/fly_distances/", species_name, "_fly_distancesTo_", species_location)
+  sea_distance_file <- paste0("theoretical_data/sea_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
+  fly_distance_file <- paste0("theoretical_data/fly_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
   
   sea_distances <- read.table(sea_distance_file)
   fly_distances <- read.table(fly_distance_file)
+  # transform Inf to NA
+  sea_distances$x[is.infinite(sea_distances$x)] <- NA
+  
+  
   sea_distances$x <- sea_distances$x/1000
   sea_distances <- subset(sea_distances, x < 40000)
   sea_distances$type <- "sea_distance"
@@ -132,7 +133,7 @@ Distribution_combDistance <- function(species_name, species_location){
       labels = c("Sea distance", "Fly distance")) +
     labs(x = "Distance in km", y = "Frequency")
   
-  #print(p)
+  print(p)
   
   if(!dir.exists(paste0("test_outputs/combined_distribution_plots"))) {
     dir.create(paste0("test_outputs/combined_distribution_plots"))
@@ -158,9 +159,9 @@ Location_histograms <- function(species_name, species_location){
   # read csv file per species
   print(paste0("species_name: ", species_name))
   print(paste0("species_location: ", species_location))
-  distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
+  distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
   
-  distance_file <- read.table(distance_file, header = TRUE)
+  distance_file <- read.table(distance_file, header = TRUE, sep = ",")
   distance_file$x <- distance_file$x/1000
   
   distances <- subset(distance_file, x < 40000)
@@ -186,12 +187,12 @@ Location_histograms <- function(species_name, species_location){
     scale_y_continuous(expand = c(0, 0)) +
     coord_cartesian(xlim = c(0, 3000)) # Use coord_cartesian for setting limits
   
-  #print(country_plot)
+  print(country_plot)
   # create a directory to save the plots in
   
   if(!dir.exists("test_outputs/sea_distribution_country_plots")) {
     dir.create("test_outputs/sea_distribution_country_plots")
-    ggsave(filename = paste0("test_outputs/sea_distribution_country_plots/plot_", species_name, "_from_", species_location, ".png"), 
+    ggsave(filename = paste0("theoretical_data/plot_", species_name, "_from_", species_location, ".png"), 
            plot = country_plot, width = 60, height = 30, units = "cm", dpi = 900)
   } else {
     ggsave(filename = paste0("test_outputs/sea_distribution_country_plots/plot_", species_name, "_from_", species_location, ".png"), 
@@ -215,7 +216,7 @@ Year_histograms <- function(species_name, species_location){
   # read csv file per species
   print(paste0("species_name: ", species_name))
   print(paste0("species_location: ", species_location))
-  distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location)
+  distance_file <- paste0("theoretical_data/sea_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
   
   distance_file <- read.table(distance_file, header = TRUE)
   distance_file$x <- distance_file$x/1000
@@ -261,7 +262,7 @@ Year_histograms <- function(species_name, species_location){
     scale_y_continuous(expand = c(0, 0)) +
     coord_cartesian(xlim = c(0, 3000)) # Use coord_cartesian for setting limits
   
-  #print(year_plot)
+  print(year_plot)
   # create a directory to save the plots in
   
   if(!dir.exists("test_outputs/sea_distribution_year_plots")) {
