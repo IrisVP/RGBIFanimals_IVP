@@ -44,14 +44,14 @@ MetaData[MetaData == ""] <- NA # Replace blank by NA
 MetaData <- na.omit(MetaData)  # remove missing values
 MetaData <- MetaData[complete.cases(MetaData), ]  # remove rows with missing values
 MetaData$Year <- format(as.Date(MetaData$Deployment_date), "%Y") # add column Year with only years
-### adding extra column with combination of Observatory.ID and year
+# adding extra column with combination of Observatory.ID and year
 MetaData$Location_Year <- paste0(MetaData$Observatory.ID, "_", MetaData$Year) 
 #Add column in which ARMS fraction is removed
 MetaData$No_Fraction <- MetaData$Filename
 MetaData$No_Fraction <- sub("\\.MF.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.MT.00", "", MetaData$No_Fraction)
 MetaData$No_Fraction <- sub("\\.SF40", "", MetaData$No_Fraction)
-######################################################################
+
 #Determine taxonomy order
 Taxonomy <- c("Phylum", "Class", "Order", "Family", "Genus", "Species")
 
@@ -160,7 +160,7 @@ write.csv(RC_Species_Loc_Year, "Read_Count_Species_Loc_Year.csv", row.names = FA
 write.csv(Read_Count_Species_Fraction, "Read_Count_Species_Fraction.csv", row.names = FALSE)
 write.csv(Data_LOI, "Data_LOI.csv", row.names = FALSE)
 
-#### Build dataframe to be used in AlienIdentification.R ####
+#### Build dataframe to be used for distance calculations ####
 Species_Location <- Read_Count_Species_Fraction
 ### THIS IS THE SAME AS Read_Count_Species_Fraction => removed duplicate code
 
