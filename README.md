@@ -3,18 +3,18 @@
 Species of maritime fauna all over the world are known to travel great distances in the oceans and seas. Some of these organisms are called ‘alien species’ when they travel from their natural habitat to another location that they didn’t inhabit before. With this workflow containing R scripts, we want to detect these alien species. This detection is realised by using occurrence data from GBIF and samplelocations to calculate sea distances between them.
 
 ## Origin
-This is a revised workflow of RGBIFanimals: \n
+This is a revised workflow of RGBIFanimals: <br />
 https://github.com/DvBMolEc/rgbifanimals
 
 ## General information
 Usage of the scripts from RGBIFanimals original workflow is present in the user guide below. Example output can be found in the directory 'Example_Output'. Example input can be found in the directory 'Inputs'.
 
 ## Revised
-In this Github page, the 2_Functions.R and 3_Main_script.R were revised and joined (+ adjusted) into one new big script called 3.2_New_Main_script.R. \n
+In this Github page, the 2_Functions.R and 3_Main_script.R were revised and joined (+ adjusted) into one new big script called 3.2_New_Main_script.R. <br />
 /!\ WARNING /!\ => The results wil not be correct because of the usage of a world map that is distorted when calculating sea distances!
 
 ## New workflow 'AlienDetective'
-In the new workflow AlienDetective, there is a workflow of R scripts that does give good results. These scripts are also present in the directory 'new_workflow_Iris'. For more information on the new workflow, take a look at the AlienDetective Github page. \n
+In the new workflow AlienDetective, there is a workflow of R scripts that does give good results. These scripts are also present in the directory 'new_workflow_Iris'. For more information on the new workflow, take a look at the AlienDetective Github page. <br />
 https://github.com/IrisVP/AlienDetective
 
 # Original README from RGBIFanimals
