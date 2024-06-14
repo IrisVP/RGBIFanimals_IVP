@@ -21,6 +21,17 @@ library("rnaturalearthdata")
 library("maps")
 library("FRK")
 
+# instructions to download the rnaturalearthhires
+# Install the devtools package if it's not already installed
+if (!requireNamespace("devtools", quietly = TRUE)) {
+  install.packages("devtools")
+}
+
+# Install the rnaturalearthhires package from GitHub
+devtools::install_github("ropensci/rnaturalearthhires")
+
+# Load the necessary library
+library(rnaturalearthhires)
 
 ############################################################################################
 # LOAD DATA
@@ -197,11 +208,11 @@ Calculation_seadistance <- function(species_name, species_location){
   ##########################################################################
 
   # Load world data and prepare the raster
-  world <- ne_countries(scale = "medium", returnclass = "sf")
-  r <- raster(extent(-180, 180, -90, 90), res = 0.1)
-  r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE)
-  costs <- reclassify(r, cbind(1, Inf))
-  costs[is.na(costs)] <- 1  # Set water cells to a low cost (e.g., 1)
+  world <- ne_countries(scale = "medium", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
+  r <- raster(extent(-180, 180, -90, 90), res = 0.1)           # Create a raster object with a global extent and resolution of 0.1 degrees
+  r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE) # Rasterize the 'world' sf object, assigning a value of 1 to cells with country presence
+  costs <- reclassify(r, cbind(1, Inf))                        # Reclassify the raster: convert all values of 1 to Inf (infinity)
+  costs[is.na(costs)] <- 1    # Replace NA values in the 'costs' raster with 1
   
   # Initialize lists to store distances
   sea_distances <- c()
@@ -234,7 +245,6 @@ Calculation_seadistance <- function(species_name, species_location){
       # Define points using correct projection
       point1 <- SpatialPoints(cbind(samplelocation$Longitude, samplelocation$Latitude), proj4string = CRS(proj4string(r)))
       point2 <- SpatialPoints(cbind(OccurrenceData[row, 2], OccurrenceData[row, 3]), proj4string = CRS(proj4string(r)))
-      
       # Check if the OccurrenceData point is on land, if so, skip this and put inf as a result
       if (!is.na(raster::extract(r, point2))) {
         add_error_message(paste("Point on land detected for", species_name, "at", OccurrenceData[row, 2], "", OccurrenceData[row, 3]))
@@ -249,7 +259,7 @@ Calculation_seadistance <- function(species_name, species_location){
       cost_distance <- costDistance(transitMatrix, point1_df, point2_df)
       # Calculate the shortest path
       shortest_path <- shortestPath(transitMatrix, point1_df, point2_df, output = "SpatialLines")
-  
+      
       # Plotting the shortest path and the world map
       #plot(r, main = "Shortest Water Path")
       #plot(world, add = TRUE, col = "grey")
@@ -262,14 +272,12 @@ Calculation_seadistance <- function(species_name, species_location){
       crs_info <- proj4string(shortest_path)  # or use crs(shortest_path) if using `sp`
   
       # If it's not set, set it here, assuming the original data was in WGS 84 (EPSG:4326)
-      crs_info <- proj4string(shortest_path)
       if (is.na(crs_info)) {
         proj4string(shortest_path) <- CRS("+init=epsg:4326")
       }
   
       # Convert SpatialLines to sf object
       shortest_path_sf <- st_as_sf(shortest_path)
-    
       # Confirm CRS is set for sf object, if not, set it:
       if (is.na(st_crs(shortest_path_sf))) {
         st_crs(shortest_path_sf) <- 4326  # EPSG code for WGS 84
@@ -331,6 +339,12 @@ Calculation_seadistance <- function(species_name, species_location){
       stop("Lengths of vectors do not match. Please ensure all vectors have the same length.")
     }
   }
+  ### CHECKS IF NECESSARY ###
+  #cat("Length of flying_distances: ", length(flying_distances), "\n")
+  #cat("Length of sea_distances: ", length(sea_distances), "\n")
+  #cat("Length of OccurrenceData$year: ", length(OccurrenceData$year), "\n")
+  #cat("Length of OccurrenceData$month: ", length(OccurrenceData$month), "\n")
+  #cat("Length of OccurrenceData$country: ", length(OccurrenceData$country), "\n")
   
   # Create sea data frame
   sea_data <- create_data_frame(sea_distances, OccurrenceData$year, OccurrenceData$month, OccurrenceData$country)
@@ -339,8 +353,8 @@ Calculation_seadistance <- function(species_name, species_location){
   fly_data <- create_data_frame(flying_distances, OccurrenceData$year, OccurrenceData$month, OccurrenceData$country)
   
   # Define file paths
-  sea_distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
-  fly_distance_file <- paste0("test_outputs/fly_distances/", species_name, "_distancesTo_", species_location, "_realData.csv")
+  sea_distance_file <- paste0("test_outputs/sea_distances/", species_name, "_distancesTo_", species_location, ".csv")
+  fly_distance_file <- paste0("test_outputs/fly_distances/", species_name, "_distancesTo_", species_location, ".csv")
   
   # Create directories if they do not exist
   if (!dir.exists("test_outputs/sea_distances")) {
@@ -360,14 +374,4 @@ Calculation_seadistance <- function(species_name, species_location){
 }
 
 results <- lapply(seq_len(nrow(long)), function(i) Calculation_seadistance(long$Specieslist[i], long$name[i]))
-
-# write error file
-if (length(error_messages) > 0) {
-  error_df <- data.frame(error_message = unlist(error_messages))
-  write.csv(error_df, "test_outputs/species_error.csv", row.names = FALSE)
-}
-
-
-
-
 
