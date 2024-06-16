@@ -12,10 +12,14 @@ Usage of the scripts from RGBIFanimals original workflow is present in the user 
 ## Revised
 In this Github page, the 2_Functions.R and 3_Main_script.R were revised and joined (+ adjusted) into one new big script called 3.2_New_Main_script.R. <br />
 
-### 3.2_New_Main_script
+#### 3.2_New_Main_script.R
 The first step in this script is making a rastered world. After this, the shortest path to each sampling location in a line will be calculated (not sea distance). Lastly, the shortest route in sea will be calculated.
 
-/!\ WARNING /!\ => The results will not be correct because of the usage of a world map that is distorted when calculating sea distances!
+#### 1_Preparation.R
+This script is based on input files from BOLDigger. This can be used when you want to prepare these kind of files. But you can start from 3.2_New_Main_script.R with a 'Coordinates.csv' and 'Species_Location.csv' file.
+
+## /!\ WARNING /!\
+The results will not be correct because of the usage of a world map that is distorted when calculating sea distances!
 
 ## New workflow 'AlienDetective'
 In the new workflow AlienDetective, there is a workflow of R scripts that gives good results. These scripts are also present in the directory 'new_workflow_Iris'. For more information on the new workflow, take a look at the AlienDetective Github page. <br />
