@@ -52,6 +52,9 @@ long <- pivot_longer(df, !Specieslist)
 # from tidyr package, reshape df from wide to long format
 long <- long[long$value > 0, ]
 
+long <- long[long$Specieslist != "Acartia bifilosa" & long$Specieslist != "Acartia margalefi"
+               & !(long$name %in% c("SwedishWestCoast", "Laeso", "Limfjord")), ]
+
 #####################################################################################
 # FIRST CHECK IF FILE WITH OCCURRENCE DATA IN OCCURRENCEDATA DIRECTORY EXISTS
 # IF NOT: MAKE ONE AND GET DATA FROM GBIF
